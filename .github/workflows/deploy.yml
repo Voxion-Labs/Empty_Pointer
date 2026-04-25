@@ -1,0 +1,67 @@
+name: Build and Deploy Web Game
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.70
+          actions-cache-folder: emsdk-cache
+
+      - name: Cache raylib
+        uses: actions/cache@v4
+        with:
+          path: raylib
+          key: raylib-5.5-web-${{ runner.os }}-emsdk-3.1.70
+
+      - name: Build raylib for WebAssembly
+        run: |
+          if [ ! -d raylib ]; then
+            git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git raylib
+          fi
+          make -C raylib/src PLATFORM=PLATFORM_WEB
+
+      - name: Build Empty_Pointer
+        run: make web RAYLIB_SRC=raylib/src
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

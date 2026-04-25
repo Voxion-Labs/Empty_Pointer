@@ -1,0 +1,15 @@
+build/
+public/
+raylib/
+emsdk-cache/
+
+*.exe
+*.o
+*.obj
+*.wasm
+*.data
+*.js
+*.html.mem
+
+.DS_Store
+Thumbs.db

@@ -16,11 +16,14 @@ namespace
     constexpr float kEnemySpeedRamp = 4.0f;
     constexpr float kInitialSpawnInterval = 1.15f;
     constexpr float kMinSpawnInterval = 0.34f;
+    constexpr float kOpeningGraceSeconds = 0.55f;
 
     constexpr float kParticleMinSpeed = 90.0f;
     constexpr float kParticleMaxSpeed = 260.0f;
     constexpr float kParticleLife = 0.72f;
     constexpr float kParticleDrag = 6.0f;
+    constexpr float kButtonWidth = 260.0f;
+    constexpr float kButtonHeight = 52.0f;
 
     constexpr Color kBackground = { 18, 18, 24, 255 };
     constexpr Color kGridLine = { 42, 44, 54, 255 };
@@ -29,6 +32,9 @@ namespace
     constexpr Color kText = { 232, 236, 244, 255 };
     constexpr Color kMutedText = { 150, 156, 170, 255 };
     constexpr Color kDanger = { 255, 92, 108, 255 };
+    constexpr Color kButton = { 38, 168, 142, 255 };
+    constexpr Color kButtonHover = { 56, 208, 176, 255 };
+    constexpr Color kButtonText = { 10, 16, 18, 255 };
 }
 
 Game::Game()
@@ -93,6 +99,7 @@ void Game::ResetGame()
 void Game::StartGame()
 {
     ResetGame();
+    enemySpawnTimer_ = -kOpeningGraceSeconds;
     state_ = PLAYING;
 }
 
@@ -125,7 +132,7 @@ void Game::Update(float deltaTime)
 
 void Game::UpdateMenu()
 {
-    if (IsKeyPressed(KEY_ENTER))
+    if (WasActionPressed())
     {
         StartGame();
     }
@@ -201,7 +208,7 @@ void Game::UpdateGameOver(float deltaTime)
 {
     UpdateParticles(deltaTime);
 
-    if (IsKeyPressed(KEY_ENTER))
+    if (WasActionPressed())
     {
         StartGame();
     }
@@ -238,7 +245,7 @@ void Game::Draw() const
         enemy.Draw();
     }
 
-    if (state_ != GAMEOVER)
+    if (state_ == PLAYING)
     {
         DrawPlayer();
     }
@@ -249,7 +256,8 @@ void Game::Draw() const
     {
     case MENU:
         DrawCenteredText("EMPTY_POINTER", screenHeight_ / 2 - 72, 44, kText);
-        DrawCenteredText("Press ENTER to Start", screenHeight_ / 2, 24, kMutedText);
+        DrawCenteredText("Press ENTER or click START", screenHeight_ / 2 - 14, 22, kMutedText);
+        DrawButton(GetMenuButtonBounds(), "START");
         break;
     case PLAYING:
         DrawText(TextFormat("TIME %.1f", survivalTime_), 18, 16, 22, kText);
@@ -257,7 +265,8 @@ void Game::Draw() const
     case GAMEOVER:
         DrawCenteredText("GAME OVER", screenHeight_ / 2 - 64, 48, kDanger);
         DrawCenteredText(TextFormat("Survived %.1f seconds", survivalTime_), screenHeight_ / 2 - 8, 24, kText);
-        DrawCenteredText("Press ENTER to Restart", screenHeight_ / 2 + 34, 22, kMutedText);
+        DrawCenteredText("Press ENTER or click RESTART", screenHeight_ / 2 + 32, 22, kMutedText);
+        DrawButton(GetGameOverButtonBounds(), "RESTART");
         break;
     }
 
@@ -294,10 +303,50 @@ void Game::DrawParticles() const
     }
 }
 
+void Game::DrawButton(Rectangle bounds, const char* text) const
+{
+    const bool hovering = CheckCollisionPointRec(GetMousePosition(), bounds);
+    const Color fill = hovering ? kButtonHover : kButton;
+    const int fontSize = 24;
+    const int textWidth = MeasureText(text, fontSize);
+    const int textX = static_cast<int>(bounds.x + bounds.width * 0.5f - textWidth * 0.5f);
+    const int textY = static_cast<int>(bounds.y + bounds.height * 0.5f - fontSize * 0.5f);
+
+    DrawRectangleRec(bounds, fill);
+    DrawRectangleLinesEx(bounds, 2.0f, kPlayerAccent);
+    DrawText(text, textX, textY, fontSize, kButtonText);
+}
+
 void Game::DrawCenteredText(const char* text, int y, int fontSize, Color color) const
 {
     const int width = MeasureText(text, fontSize);
     DrawText(text, screenWidth_ / 2 - width / 2, y, fontSize, color);
+}
+
+bool Game::WasActionPressed() const
+{
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE))
+    {
+        return true;
+    }
+
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        return false;
+    }
+
+    const Vector2 mousePosition = GetMousePosition();
+    if (state_ == MENU)
+    {
+        return CheckCollisionPointRec(mousePosition, GetMenuButtonBounds());
+    }
+
+    if (state_ == GAMEOVER)
+    {
+        return CheckCollisionPointRec(mousePosition, GetGameOverButtonBounds());
+    }
+
+    return false;
 }
 
 void Game::TryMovePlayer(int dx, int dy)
@@ -317,6 +366,11 @@ void Game::TryMovePlayer(int dx, int dy)
 
 void Game::SpawnEnemy()
 {
+    if (!IsPlayerReadyForThreats())
+    {
+        return;
+    }
+
     const int side = GetRandomValue(0, 3);
     int gridX = 0;
     int gridY = 0;
@@ -352,6 +406,11 @@ void Game::SpawnEnemy()
     );
 }
 
+bool Game::IsPlayerReadyForThreats() const
+{
+    return survivalTime_ >= kOpeningGraceSeconds;
+}
+
 void Game::SpawnDeathParticles()
 {
     const Vector2 center = GetPlayerCenter();
@@ -376,6 +435,26 @@ void Game::SpawnDeathParticles()
 
         particles_.push_back(particle);
     }
+}
+
+Rectangle Game::GetMenuButtonBounds() const
+{
+    return {
+        screenWidth_ * 0.5f - kButtonWidth * 0.5f,
+        screenHeight_ * 0.5f + 34.0f,
+        kButtonWidth,
+        kButtonHeight
+    };
+}
+
+Rectangle Game::GetGameOverButtonBounds() const
+{
+    return {
+        screenWidth_ * 0.5f - kButtonWidth * 0.5f,
+        screenHeight_ * 0.5f + 74.0f,
+        kButtonWidth,
+        kButtonHeight
+    };
 }
 
 Rectangle Game::GetPlayerBounds() const

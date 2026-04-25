@@ -23,8 +23,7 @@ WEB_FLAGS := \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s INITIAL_MEMORY=67108864 \
 	-s ASSERTIONS=0 \
-	--shell-file shell.html \
-	--preload-file assets@assets
+	--shell-file shell.html
 
 .PHONY: all native web clean
 
@@ -41,7 +40,6 @@ web: $(PUBLIC_DIR)/index.html
 $(PUBLIC_DIR)/index.html: $(SOURCES) shell.html
 	mkdir -p $(PUBLIC_DIR)
 	$(EMXX) $(SOURCES) $(WEB_FLAGS) -o $@
-	cp shell.html $(PUBLIC_DIR)/shell.html
 	touch $(PUBLIC_DIR)/.nojekyll
 
 clean:

@@ -59,12 +59,17 @@ private:
     void DrawGrid() const;
     void DrawPlayer() const;
     void DrawParticles() const;
+    void DrawButton(Rectangle bounds, const char* text) const;
     void DrawCenteredText(const char* text, int y, int fontSize, Color color) const;
 
+    bool WasActionPressed() const;
     void TryMovePlayer(int dx, int dy);
     void SpawnEnemy();
     void SpawnDeathParticles();
+    bool IsPlayerReadyForThreats() const;
 
+    Rectangle GetMenuButtonBounds() const;
+    Rectangle GetGameOverButtonBounds() const;
     Rectangle GetPlayerBounds() const;
     Vector2 GetPlayerCenter() const;
     Vector2 GridToWorld(int gridX, int gridY) const;

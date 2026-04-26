@@ -21,6 +21,7 @@ Empty_Pointer is a lightweight arcade survival game where the player moves acros
 <p align="center">
   <a href="https://liambrooks-lab.github.io/Empty_Pointer/">Click to PLAY</a>
 </p>
+
 ## Features
 
 - Smooth grid movement using interpolated player rendering.

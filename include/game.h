@@ -28,6 +28,7 @@ public:
     void RequestToggleGuide();
     void RequestTogglePause();
     void RequestAttack();
+    void RequestMainMenu();
 
 private:
     struct Player
@@ -85,6 +86,9 @@ private:
     void SpawnDeathParticles();
     void SpawnEnemyParticles(Vector2 center);
     bool IsPlayerReadyForThreats() const;
+    bool IsEnemyInPulseRange(Rectangle enemyBounds, Vector2 playerCenter) const;
+    void SetPaused(bool paused);
+    void SyncPauseUi() const;
     void InitializeAudio();
     void ShutdownAudio();
     void PlayUiSound() const;
@@ -96,6 +100,7 @@ private:
     Rectangle GetMenuButtonBounds() const;
     Rectangle GetGameOverButtonBounds() const;
     Rectangle GetGuideButtonBounds() const;
+    Rectangle GetPauseMenuButtonBounds() const;
     Rectangle GetAttackButtonBounds() const;
     Rectangle GetUpButtonBounds() const;
     Rectangle GetDownButtonBounds() const;

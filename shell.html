@@ -114,6 +114,18 @@
             bottom: 20px;
         }
 
+        #webMenu {
+            left: 50%;
+            top: 56%;
+            transform: translateX(-50%);
+            min-width: 140px;
+            display: none;
+        }
+
+        body.game-paused #webMenu {
+            display: block;
+        }
+
         @media (max-width: 680px), (pointer: coarse) {
             body {
                 padding: 0;
@@ -140,6 +152,7 @@
             <button class="web-button" id="webGuide" type="button">GUIDE</button>
             <button class="web-button" id="webStart" type="button">START / RESTART</button>
             <button class="web-button" id="webPulse" type="button">PULSE</button>
+            <button class="web-button" id="webMenu" type="button">MAIN MENU</button>
         </div>
     </main>
     <div id="status">Loading Empty_Pointer...</div>
@@ -171,6 +184,10 @@
             "P"
         ]);
 
+        window.setPausedUi = function(paused) {
+            document.body.classList.toggle("game-paused", Boolean(paused));
+        };
+
         function focusGame() {
             canvas.focus({ preventScroll: true });
         }
@@ -181,6 +198,10 @@
             if (typeof fn === "function") {
                 fn();
             }
+        }
+
+        function setPausedUi(paused) {
+            document.body.classList.toggle("game-paused", paused);
         }
 
         function wireButton(id, exportedName) {
@@ -205,6 +226,7 @@
         wireButton("webGuide", "_EP_Guide");
         wireButton("webPause", "_EP_Pause");
         wireButton("webPulse", "_EP_Attack");
+        wireButton("webMenu", "_EP_MainMenu");
 
         var Module = {
             canvas,

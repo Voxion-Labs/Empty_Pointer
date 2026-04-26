@@ -5,6 +5,10 @@
 #include <cmath>
 #include <vector>
 
+#ifdef PLATFORM_WEB
+    #include <emscripten/emscripten.h>
+#endif
+
 namespace
 {
     constexpr int kCellSize = 40;
@@ -29,9 +33,9 @@ namespace
     constexpr float kSmallButtonWidth = 112.0f;
     constexpr float kSmallButtonHeight = 38.0f;
     constexpr float kTouchButtonSize = 54.0f;
-    constexpr float kAttackRadius = 92.0f;
-    constexpr float kAttackCooldown = 1.15f;
-    constexpr float kAttackFlashTime = 0.18f;
+    constexpr float kAttackRadius = 136.0f;
+    constexpr float kAttackCooldown = 0.82f;
+    constexpr float kAttackFlashTime = 0.24f;
 
     constexpr Color kBackground = { 18, 18, 24, 255 };
     constexpr Color kGridLine = { 42, 44, 54, 255 };
@@ -147,7 +151,7 @@ void Game::RequestToggleGuide()
     guideOpen_ = !guideOpen_;
     if (guideOpen_)
     {
-        paused_ = false;
+        SetPaused(false);
     }
 }
 
@@ -156,7 +160,7 @@ void Game::RequestTogglePause()
     if (state_ == PLAYING)
     {
         PlayUiSound();
-        paused_ = !paused_;
+        SetPaused(!paused_);
         guideOpen_ = false;
     }
 }
@@ -166,6 +170,16 @@ void Game::RequestAttack()
     if (state_ == PLAYING && !paused_ && !guideOpen_)
     {
         Attack();
+    }
+}
+
+void Game::RequestMainMenu()
+{
+    if (state_ == PLAYING && paused_)
+    {
+        PlayUiSound();
+        ResetGame();
+        state_ = MENU;
     }
 }
 
@@ -184,7 +198,7 @@ void Game::ResetGame()
     enemySpawnInterval_ = kInitialSpawnInterval;
     survivalTime_ = 0.0f;
     score_ = 0;
-    paused_ = false;
+    SetPaused(false);
     guideOpen_ = false;
     inputConsumed_ = false;
     enemies_.clear();
@@ -330,7 +344,7 @@ void Game::UpdatePauseAndGuideInput()
         guideOpen_ = !guideOpen_;
         if (guideOpen_)
         {
-            paused_ = false;
+            SetPaused(false);
         }
         inputConsumed_ = true;
         return;
@@ -347,8 +361,18 @@ void Game::UpdatePauseAndGuideInput()
     if (state_ == PLAYING && IsKeyPressed(KEY_P))
     {
         PlayUiSound();
-        paused_ = !paused_;
+        SetPaused(!paused_);
         guideOpen_ = false;
+        inputConsumed_ = true;
+        return;
+    }
+
+    if (state_ == PLAYING && paused_ && WasButtonPressed(GetPauseMenuButtonBounds()))
+    {
+        PlayUiSound();
+        ResetGame();
+        state_ = MENU;
+        inputConsumed_ = true;
     }
 }
 
@@ -602,8 +626,9 @@ void Game::DrawGuideOverlay() const
 void Game::DrawPausedOverlay() const
 {
     DrawRectangle(0, 0, screenWidth_, screenHeight_, kOverlay);
-    DrawCenteredText("PAUSED", screenHeight_ / 2 - 38, 42, kText);
-    DrawCenteredText("Press P to resume", screenHeight_ / 2 + 18, 22, kMutedText);
+    DrawCenteredText("PAUSED", screenHeight_ / 2 - 74, 42, kText);
+    DrawCenteredText("Press P to resume", screenHeight_ / 2 - 18, 22, kMutedText);
+    DrawButton(GetPauseMenuButtonBounds(), "MAIN MENU");
 }
 
 void Game::DrawCenteredText(const char* text, int y, int fontSize, Color color) const
@@ -701,6 +726,7 @@ void Game::Attack()
     player_.attackFlashTimer = kAttackFlashTime;
     PlayPulseSound();
 
+    int destroyed = 0;
     for (int i = static_cast<int>(enemies_.size()) - 1; i >= 0; --i)
     {
         const Rectangle bounds = enemies_[i].GetBounds();
@@ -709,14 +735,18 @@ void Game::Attack()
             bounds.y + bounds.height * 0.5f
         };
 
-        const Vector2 delta = math::Sub(enemyCenter, playerCenter);
-        if (math::LengthSqr(delta) <= kAttackRadius * kAttackRadius)
+        if (IsEnemyInPulseRange(bounds, playerCenter))
         {
-            PlayEnemyHitSound();
             SpawnEnemyParticles(enemyCenter);
             enemies_.erase(enemies_.begin() + i);
             score_ += 10;
+            ++destroyed;
         }
+    }
+
+    if (destroyed > 0)
+    {
+        PlayEnemyHitSound();
     }
 }
 
@@ -765,6 +795,34 @@ void Game::SpawnEnemy()
 bool Game::IsPlayerReadyForThreats() const
 {
     return survivalTime_ >= kOpeningGraceSeconds;
+}
+
+bool Game::IsEnemyInPulseRange(Rectangle enemyBounds, Vector2 playerCenter) const
+{
+    const float closestX = playerCenter.x < enemyBounds.x
+        ? enemyBounds.x
+        : (playerCenter.x > enemyBounds.x + enemyBounds.width ? enemyBounds.x + enemyBounds.width : playerCenter.x);
+
+    const float closestY = playerCenter.y < enemyBounds.y
+        ? enemyBounds.y
+        : (playerCenter.y > enemyBounds.y + enemyBounds.height ? enemyBounds.y + enemyBounds.height : playerCenter.y);
+
+    const Vector2 closestPoint = { closestX, closestY };
+    const Vector2 delta = math::Sub(closestPoint, playerCenter);
+    return math::LengthSqr(delta) <= kAttackRadius * kAttackRadius;
+}
+
+void Game::SetPaused(bool paused)
+{
+    paused_ = paused;
+    SyncPauseUi();
+}
+
+void Game::SyncPauseUi() const
+{
+#ifdef PLATFORM_WEB
+    emscripten_run_script(paused_ ? "setPausedUi(true)" : "setPausedUi(false)");
+#endif
 }
 
 void Game::InitializeAudio()
@@ -911,6 +969,16 @@ Rectangle Game::GetGuideButtonBounds() const
     return { screenWidth_ - 130.0f, 54.0f, kSmallButtonWidth, kSmallButtonHeight };
 }
 
+Rectangle Game::GetPauseMenuButtonBounds() const
+{
+    return {
+        screenWidth_ * 0.5f - kButtonWidth * 0.5f,
+        screenHeight_ * 0.5f + 32.0f,
+        kButtonWidth,
+        kButtonHeight
+    };
+}
+
 Rectangle Game::GetAttackButtonBounds() const
 {
     return {
@@ -976,6 +1044,10 @@ bool Game::IsPointerOverUi(Vector2 pointer) const
     else if (state_ == GAMEOVER)
     {
         overUi = overUi || CheckCollisionPointRec(pointer, GetGameOverButtonBounds());
+    }
+    else if (state_ == PLAYING && paused_)
+    {
+        overUi = overUi || CheckCollisionPointRec(pointer, GetPauseMenuButtonBounds());
     }
 
     return overUi;

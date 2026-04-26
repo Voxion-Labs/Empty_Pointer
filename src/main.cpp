@@ -36,6 +36,11 @@ extern "C"
     {
         g_game->RequestAttack();
     }
+
+    EMSCRIPTEN_KEEPALIVE void EP_MainMenu()
+    {
+        g_game->RequestMainMenu();
+    }
 }
 #endif
 

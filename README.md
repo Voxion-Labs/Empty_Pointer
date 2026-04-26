@@ -89,9 +89,9 @@ make native
 </p>
 
 <p align="center">
-  <strong>Rudranarayan Jena</strong><br>
+  <strong>Crafted by Rudranarayan Jena</strong><br>
   C++ and game-development learner building small, focused projects with clean code and web-friendly deployment in mind.<br>
-  GitHub: <a href="https://github.com/liambrooks-lab">https://github.com/liambrooks-lab</a>
+  GitHub: <a href="https://github.com/liambrooks-lab">GitHub Profile</a>
 </p>
 
 ## Contributing

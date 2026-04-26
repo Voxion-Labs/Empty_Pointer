@@ -114,7 +114,7 @@ make native
 <p align="center">
   <strong>Crafted by Rudranarayan Jena</strong><br>
   C++ and game-development learner building small, focused projects with clean code and web-friendly deployment in mind.<br>
-  GitHub: <a href="https://github.com/liambrooks-lab">GitHub Profile</a>
+   <a href="https://github.com/liambrooks-lab">View GitHub Profile</a>
 </p>
 
 ## Contributing

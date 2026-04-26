@@ -14,12 +14,12 @@
         html,
         body {
             width: 100%;
-            min-height: 100%;
+            height: 100%;
             margin: 0;
             overflow: hidden;
             background: #121218;
             color: #eef1f8;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
         }
 
         body {
@@ -28,23 +28,33 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
+            padding: 12px;
+        }
+
+        #pageFrame {
+            width: min(100%, 840px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
 
         #gameShell {
             position: relative;
-            width: min(calc(100vw - 20px), calc((100dvh - 20px) * 4 / 3));
-            height: min(calc(100dvh - 20px), calc((100vw - 20px) * 3 / 4));
-            max-width: 800px;
-            max-height: 600px;
+            width: min(calc(100vw - 24px), 800px, calc((100dvh - 112px) * 4 / 3));
+            aspect-ratio: 4 / 3;
+            max-height: calc(100dvh - 112px);
             display: grid;
             place-items: center;
+            overflow: hidden;
             background: #121218;
         }
 
         canvas {
-            width: 100%;
-            height: 100%;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
             display: block;
             outline: none;
             image-rendering: auto;
@@ -68,22 +78,20 @@
         }
 
         .web-controls {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
+            width: min(calc(100vw - 24px), 800px);
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
         }
 
         .web-button {
-            position: absolute;
-            min-width: 82px;
-            min-height: 38px;
+            min-height: 42px;
             border: 2px solid #a5ffe1;
-            background: rgba(56, 208, 176, 0.92);
+            background: #38d0b0;
             color: #081013;
-            font: 800 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font: 800 13px "Trebuchet MS", "Segoe UI", sans-serif;
             letter-spacing: 0;
             cursor: pointer;
-            pointer-events: auto;
             touch-action: manipulation;
         }
 
@@ -92,33 +100,7 @@
             background: #58f0cf;
         }
 
-        #webStart {
-            left: 50%;
-            bottom: 20px;
-            transform: translateX(-50%);
-            min-width: 180px;
-        }
-
-        #webGuide {
-            right: 18px;
-            top: 54px;
-        }
-
-        #webPause {
-            left: 18px;
-            top: 18px;
-        }
-
-        #webPulse {
-            right: 18px;
-            bottom: 20px;
-        }
-
         #webMenu {
-            left: 50%;
-            top: 56%;
-            transform: translateX(-50%);
-            min-width: 140px;
             display: none;
         }
 
@@ -126,27 +108,45 @@
             display: block;
         }
 
+        body.game-paused .web-controls {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
         @media (max-width: 680px), (pointer: coarse) {
             body {
-                padding: 0;
+                align-items: flex-start;
+                justify-content: center;
+                padding: max(10px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom));
+            }
+
+            #pageFrame {
+                width: 100%;
+                gap: 8px;
             }
 
             #gameShell {
-                width: min(100vw, calc(100dvh * 4 / 3));
-                height: min(100dvh, calc(100vw * 3 / 4));
+                width: min(100%, calc((100dvh - 88px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 4 / 3));
+                max-height: calc(100dvh - 88px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            }
+
+            .web-controls,
+            body.game-paused .web-controls {
+                width: min(100%, 800px);
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .web-button {
-                min-width: 76px;
-                min-height: 42px;
+                min-height: 40px;
                 font-size: 12px;
             }
         }
     </style>
 </head>
 <body>
-    <main id="gameShell">
-        <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0" autofocus></canvas>
+    <div id="pageFrame">
+        <main id="gameShell">
+            <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0" autofocus></canvas>
+        </main>
         <div class="web-controls" aria-label="Game controls">
             <button class="web-button" id="webPause" type="button">PAUSE</button>
             <button class="web-button" id="webGuide" type="button">GUIDE</button>
@@ -154,7 +154,7 @@
             <button class="web-button" id="webPulse" type="button">PULSE</button>
             <button class="web-button" id="webMenu" type="button">MAIN MENU</button>
         </div>
-    </main>
+    </div>
     <div id="status">Loading Empty_Pointer...</div>
 
     <script>
@@ -188,20 +188,32 @@
             document.body.classList.toggle("game-paused", Boolean(paused));
         };
 
-        function focusGame() {
-            canvas.focus({ preventScroll: true });
-        }
-
-        function callGame(name) {
-            focusGame();
-            const fn = Module && Module[name];
+        function unlockAudio() {
+            const fn = Module && Module._EP_UnlockAudio;
             if (typeof fn === "function") {
                 fn();
             }
         }
 
-        function setPausedUi(paused) {
-            document.body.classList.toggle("game-paused", paused);
+        function fitCanvasToShell() {
+            canvas.style.width = "100%";
+            canvas.style.height = "100%";
+            canvas.style.maxWidth = "100%";
+            canvas.style.maxHeight = "100%";
+        }
+
+        function focusGame() {
+            fitCanvasToShell();
+            canvas.focus({ preventScroll: true });
+        }
+
+        function callGame(name) {
+            focusGame();
+            unlockAudio();
+            const fn = Module && Module[name];
+            if (typeof fn === "function") {
+                fn();
+            }
         }
 
         function wireButton(id, exportedName) {
@@ -213,13 +225,19 @@
         }
 
         window.addEventListener("load", focusGame);
-        window.addEventListener("pointerdown", focusGame);
+        window.addEventListener("resize", fitCanvasToShell);
+        window.addEventListener("orientationchange", fitCanvasToShell);
+        window.addEventListener("pointerdown", () => {
+            focusGame();
+            unlockAudio();
+        });
         window.addEventListener("keydown", (event) => {
             if (gameKeys.has(event.key) || gameKeys.has(event.code)) {
                 event.preventDefault();
             }
 
             focusGame();
+            unlockAudio();
         }, { passive: false });
 
         wireButton("webStart", "_EP_Start");

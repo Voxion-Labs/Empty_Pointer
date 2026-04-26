@@ -29,17 +29,36 @@ Empty_Pointer is a lightweight arcade survival game where the player moves acros
 - Menu, gameplay, and game-over state flow.
 - AABB collision detection.
 - Player death particles for extra impact.
+- Pulse attack for clearing nearby enemies.
+- Pause screen with a return-to-main-menu option.
+- Mobile-friendly browser controls below the game canvas.
+- Procedural sound effects for movement, UI, pulse, hits, and game over.
 - Static GitHub Pages deployment through GitHub Actions.
 
 ## Controls
 
-- `ENTER`, `SPACE`, or `START / RESTART` button: start or restart.
-- Hold `WASD`, arrow keys, or the on-screen arrows: move.
-- Tap or click a grid cell: move toward that cell.
-- `E` or `PULSE`: destroy nearby enemies when the pulse is ready.
-- `P`: pause or resume the game.
-- `GUIDE`: open the in-game controls panel.
-- Avoid enemies for as long as possible.
+- Start or restart: press `ENTER`, press `SPACE`, or use `START / RESTART`.
+- Move on keyboard: hold `WASD` or the arrow keys.
+- Move on mouse/touch: tap or click a grid cell.
+- Mobile movement: use the in-game arrow buttons, or tap cells directly.
+- Pulse attack: press `E` or use `PULSE` to destroy nearby enemies when ready.
+- Pause: press `P` or use `PAUSE`.
+- Main menu: pause first, then use `MAIN MENU`.
+- Guide: use `G` or `GUIDE`.
+
+## How To Play
+
+Survive as long as possible while enemies enter from the grid edges and chase the player. Your player occupies one grid cell in the game world, and movement slides smoothly between cells.
+
+Use movement to keep distance, then use `PULSE` when enemies get close. The pulse checks against enemy rectangles, so it can destroy enemies near the player even if their centers are not perfectly inside the ring. The pulse has a short cooldown, shown in the HUD.
+
+Tips:
+
+- Do not spam pulse when enemies are far away; save it for clusters.
+- Move diagonally by alternating horizontal and vertical moves.
+- On mobile, use the browser control dock below the canvas for reliable buttons.
+- If the game looks zoomed after a deploy, hard refresh the page and rotate the phone once to force a viewport recalculation.
+- If sounds do not start immediately, tap any browser control once; mobile browsers require a user gesture before audio can play.
 
 ## GitHub Pages Deployment
 

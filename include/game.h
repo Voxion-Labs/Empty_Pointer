@@ -29,6 +29,7 @@ public:
     void RequestTogglePause();
     void RequestAttack();
     void RequestMainMenu();
+    void RequestUnlockAudio();
 
 private:
     struct Player
@@ -89,13 +90,14 @@ private:
     bool IsEnemyInPulseRange(Rectangle enemyBounds, Vector2 playerCenter) const;
     void SetPaused(bool paused);
     void SyncPauseUi() const;
+    void EnsureAudio();
     void InitializeAudio();
     void ShutdownAudio();
-    void PlayUiSound() const;
-    void PlayMoveSound() const;
-    void PlayPulseSound() const;
-    void PlayEnemyHitSound() const;
-    void PlayGameOverSound() const;
+    void PlayUiSound();
+    void PlayMoveSound();
+    void PlayPulseSound();
+    void PlayEnemyHitSound();
+    void PlayGameOverSound();
 
     Rectangle GetMenuButtonBounds() const;
     Rectangle GetGameOverButtonBounds() const;

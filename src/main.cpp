@@ -41,6 +41,11 @@ extern "C"
     {
         g_game->RequestMainMenu();
     }
+
+    EMSCRIPTEN_KEEPALIVE void EP_UnlockAudio()
+    {
+        g_game->RequestUnlockAudio();
+    }
 }
 #endif
 

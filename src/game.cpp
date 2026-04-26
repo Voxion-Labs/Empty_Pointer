@@ -47,7 +47,8 @@ namespace
     constexpr Color kButton = { 38, 168, 142, 255 };
     constexpr Color kButtonHover = { 56, 208, 176, 255 };
     constexpr Color kButtonText = { 10, 16, 18, 255 };
-    constexpr Color kOverlay = { 8, 10, 14, 214 };
+    constexpr Color kOverlay = { 5, 6, 10, 245 };
+    constexpr Color kGuidePanel = { 3, 4, 8, 255 };
     constexpr Color kAttackRing = { 165, 255, 225, 110 };
 
     Sound CreateToneSound(float frequency, float duration, float volume, float decay)
@@ -108,7 +109,6 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
       particles_()
 {
     InitWindow(screenWidth_, screenHeight_, title);
-    InitializeAudio();
     SetTargetFPS(60);
 
     ResetGame();
@@ -181,6 +181,11 @@ void Game::RequestMainMenu()
         ResetGame();
         state_ = MENU;
     }
+}
+
+void Game::RequestUnlockAudio()
+{
+    EnsureAudio();
 }
 
 void Game::ResetGame()
@@ -610,17 +615,22 @@ void Game::DrawMobileControls() const
 
 void Game::DrawGuideOverlay() const
 {
-    const Rectangle panel = { 90.0f, 92.0f, 620.0f, 392.0f };
-    DrawRectangleRec(panel, kOverlay);
+    const Rectangle panel = { 70.0f, 70.0f, 660.0f, 460.0f };
+    DrawRectangle(0, 0, screenWidth_, screenHeight_, kGuidePanel);
+    DrawRectangleRec(panel, kGuidePanel);
     DrawRectangleLinesEx(panel, 2.0f, kPlayerAccent);
 
-    DrawCenteredText("HOW TO PLAY", 118, 30, kText);
-    DrawText("Move: hold WASD, arrow keys, or on-screen arrows.", 126, 172, 20, kText);
-    DrawText("Mouse / touch: tap a grid cell to move there.", 126, 206, 20, kText);
-    DrawText("Destroy enemies: press E or tap PULSE.", 126, 240, 20, kText);
-    DrawText("Pause: press P anytime during play.", 126, 274, 20, kText);
-    DrawText("Goal: survive, dodge, and build your score.", 126, 308, 20, kText);
-    DrawText("Tap anywhere or press ESC to close.", 126, 362, 20, kMutedText);
+    DrawCenteredText("HOW TO PLAY", 98, 30, kText);
+    DrawText("Start / restart: ENTER, SPACE, or START / RESTART.", 104, 148, 18, kText);
+    DrawText("Move: hold WASD, arrow keys, or the in-game arrows.", 104, 180, 18, kText);
+    DrawText("Mouse / touch: tap a grid cell to move there.", 104, 212, 18, kText);
+    DrawText("Mobile: use the browser control dock below the game.", 104, 244, 18, kText);
+    DrawText("Pulse: press E or PULSE to clear nearby enemies.", 104, 276, 18, kText);
+    DrawText("Pulse has a cooldown, so save it for close enemies.", 104, 308, 18, kMutedText);
+    DrawText("Pause: press P or PAUSE. Main menu appears while paused.", 104, 340, 18, kText);
+    DrawText("Guide: press G or GUIDE. Goal: survive and score.", 104, 372, 18, kText);
+    DrawText("Sounds unlock after your first tap, click, or key press.", 104, 404, 18, kMutedText);
+    DrawText("Tap anywhere or press ESC to close.", 104, 466, 18, kMutedText);
 }
 
 void Game::DrawPausedOverlay() const
@@ -812,6 +822,14 @@ bool Game::IsEnemyInPulseRange(Rectangle enemyBounds, Vector2 playerCenter) cons
     return math::LengthSqr(delta) <= kAttackRadius * kAttackRadius;
 }
 
+void Game::EnsureAudio()
+{
+    if (!audioReady_)
+    {
+        InitializeAudio();
+    }
+}
+
 void Game::SetPaused(bool paused)
 {
     paused_ = paused;
@@ -859,40 +877,45 @@ void Game::ShutdownAudio()
     audioReady_ = false;
 }
 
-void Game::PlayUiSound() const
+void Game::PlayUiSound()
 {
+    EnsureAudio();
     if (audioReady_)
     {
         PlaySound(uiSound_);
     }
 }
 
-void Game::PlayMoveSound() const
+void Game::PlayMoveSound()
 {
+    EnsureAudio();
     if (audioReady_)
     {
         PlaySound(moveSound_);
     }
 }
 
-void Game::PlayPulseSound() const
+void Game::PlayPulseSound()
 {
+    EnsureAudio();
     if (audioReady_)
     {
         PlaySound(pulseSound_);
     }
 }
 
-void Game::PlayEnemyHitSound() const
+void Game::PlayEnemyHitSound()
 {
+    EnsureAudio();
     if (audioReady_)
     {
         PlaySound(hitSound_);
     }
 }
 
-void Game::PlayGameOverSound() const
+void Game::PlayGameOverSound()
 {
+    EnsureAudio();
     if (audioReady_)
     {
         PlaySound(gameOverSound_);

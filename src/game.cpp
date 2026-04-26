@@ -32,7 +32,6 @@ namespace
     constexpr float kButtonHeight = 52.0f;
     constexpr float kSmallButtonWidth = 112.0f;
     constexpr float kSmallButtonHeight = 38.0f;
-    constexpr float kTouchButtonSize = 54.0f;
     constexpr float kAttackRadius = 136.0f;
     constexpr float kAttackCooldown = 0.82f;
     constexpr float kAttackFlashTime = 0.24f;
@@ -93,6 +92,12 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
       enemySpawnInterval_(kInitialSpawnInterval),
       survivalTime_(0.0f),
       score_(0),
+      kills_(0),
+      bestSurvivalTime_(0.0f),
+      bestScore_(0),
+      bestKills_(0),
+      screenShakeTimer_(0.0f),
+      screenShakeMagnitude_(0.0f),
       paused_(false),
       guideOpen_(false),
       inputConsumed_(false),
@@ -179,6 +184,7 @@ void Game::RequestMainMenu()
     {
         PlayUiSound();
         ResetGame();
+        ClearRecords();
         state_ = MENU;
     }
 }
@@ -203,11 +209,21 @@ void Game::ResetGame()
     enemySpawnInterval_ = kInitialSpawnInterval;
     survivalTime_ = 0.0f;
     score_ = 0;
+    kills_ = 0;
+    screenShakeTimer_ = 0.0f;
+    screenShakeMagnitude_ = 0.0f;
     SetPaused(false);
     guideOpen_ = false;
     inputConsumed_ = false;
     enemies_.clear();
     particles_.clear();
+}
+
+void Game::ClearRecords()
+{
+    bestSurvivalTime_ = 0.0f;
+    bestScore_ = 0;
+    bestKills_ = 0;
 }
 
 void Game::StartGame()
@@ -226,6 +242,24 @@ void Game::TriggerGameOver()
 
     SpawnDeathParticles();
     PlayGameOverSound();
+    screenShakeTimer_ = 0.28f;
+    screenShakeMagnitude_ = 8.0f;
+
+    if (survivalTime_ > bestSurvivalTime_)
+    {
+        bestSurvivalTime_ = survivalTime_;
+    }
+
+    if (score_ > bestScore_)
+    {
+        bestScore_ = score_;
+    }
+
+    if (kills_ > bestKills_)
+    {
+        bestKills_ = kills_;
+    }
+
     state_ = GAMEOVER;
 }
 
@@ -237,6 +271,15 @@ void Game::Update(float deltaTime)
 
     inputConsumed_ = false;
     UpdatePauseAndGuideInput();
+
+    if (screenShakeTimer_ > 0.0f)
+    {
+        screenShakeTimer_ -= deltaTime;
+        if (screenShakeTimer_ < 0.0f)
+        {
+            screenShakeTimer_ = 0.0f;
+        }
+    }
 
     switch (state_)
     {
@@ -386,24 +429,24 @@ void Game::UpdatePlayerInput(float deltaTime)
     int dx = 0;
     int dy = 0;
 
-    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT) || IsButtonHeld(GetLeftButtonBounds()))
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))
     {
         dx = -1;
     }
-    else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT) || IsButtonHeld(GetRightButtonBounds()))
+    else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))
     {
         dx = 1;
     }
-    else if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || IsButtonHeld(GetUpButtonBounds()))
+    else if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))
     {
         dy = -1;
     }
-    else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN) || IsButtonHeld(GetDownButtonBounds()))
+    else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))
     {
         dy = 1;
     }
 
-    if (IsKeyPressed(KEY_E) || IsButtonHeld(GetAttackButtonBounds()))
+    if (IsKeyPressed(KEY_E))
     {
         Attack();
     }
@@ -485,6 +528,19 @@ void Game::Draw() const
     BeginDrawing();
     ClearBackground(kBackground);
 
+    Camera2D camera = {};
+    camera.zoom = 1.0f;
+    if (screenShakeTimer_ > 0.0f)
+    {
+        const float power = screenShakeMagnitude_ * (screenShakeTimer_ / 0.28f);
+        camera.offset = {
+            static_cast<float>(GetRandomValue(-100, 100)) * 0.01f * power,
+            static_cast<float>(GetRandomValue(-100, 100)) * 0.01f * power
+        };
+    }
+
+    BeginMode2D(camera);
+
     DrawGrid();
 
     for (const Enemy& enemy : enemies_)
@@ -498,6 +554,8 @@ void Game::Draw() const
     }
 
     DrawParticles();
+    EndMode2D();
+
     DrawHud();
 
     switch (state_)
@@ -513,12 +571,11 @@ void Game::Draw() const
     case GAMEOVER:
         DrawCenteredText("GAME OVER", screenHeight_ / 2 - 64, 48, kDanger);
         DrawCenteredText(TextFormat("Survived %.1f seconds", survivalTime_), screenHeight_ / 2 - 8, 24, kText);
-        DrawCenteredText("Press ENTER or click RESTART", screenHeight_ / 2 + 32, 22, kMutedText);
+        DrawCenteredText(TextFormat("%d kills  |  %d points", kills_, score_), screenHeight_ / 2 + 24, 22, kText);
+        DrawCenteredText("Press ENTER or click RESTART", screenHeight_ / 2 + 54, 20, kMutedText);
         DrawButton(GetGameOverButtonBounds(), "RESTART");
         break;
     }
-
-    DrawMobileControls();
 
     if (paused_)
     {
@@ -594,23 +651,14 @@ void Game::DrawHud() const
     if (state_ == PLAYING)
     {
         DrawText(TextFormat("SCORE %d", score_), 18, 44, 20, kText);
-        DrawText(TextFormat("PULSE %.1f", player_.attackCooldown > 0.0f ? player_.attackCooldown : 0.0f), 18, 70, 18, kMutedText);
+        DrawText(TextFormat("KILLS %d", kills_), 18, 70, 20, kText);
+        DrawText(TextFormat("PULSE %.1f", player_.attackCooldown > 0.0f ? player_.attackCooldown : 0.0f), 18, 96, 18, kMutedText);
         DrawText("P: PAUSE", screenWidth_ - 116, 18, 18, kMutedText);
     }
-}
-
-void Game::DrawMobileControls() const
-{
-    if (state_ != PLAYING || paused_ || guideOpen_)
+    else if (state_ == GAMEOVER)
     {
-        return;
+        DrawText(TextFormat("BEST %.1fs  %d pts  %d kills", bestSurvivalTime_, bestScore_, bestKills_), 18, 18, 18, kMutedText);
     }
-
-    DrawButton(GetUpButtonBounds(), "^");
-    DrawButton(GetLeftButtonBounds(), "<");
-    DrawButton(GetDownButtonBounds(), "v");
-    DrawButton(GetRightButtonBounds(), ">");
-    DrawButton(GetAttackButtonBounds(), "PULSE");
 }
 
 void Game::DrawGuideOverlay() const
@@ -622,14 +670,15 @@ void Game::DrawGuideOverlay() const
 
     DrawCenteredText("HOW TO PLAY", 98, 30, kText);
     DrawText("Start / restart: ENTER, SPACE, or START / RESTART.", 104, 148, 18, kText);
-    DrawText("Move: hold WASD, arrow keys, or the in-game arrows.", 104, 180, 18, kText);
+    DrawText("Move: hold WASD or the keyboard arrow keys.", 104, 180, 18, kText);
     DrawText("Mouse / touch: tap a grid cell to move there.", 104, 212, 18, kText);
     DrawText("Mobile: use the browser control dock below the game.", 104, 244, 18, kText);
     DrawText("Pulse: press E or PULSE to clear nearby enemies.", 104, 276, 18, kText);
     DrawText("Pulse has a cooldown, so save it for close enemies.", 104, 308, 18, kMutedText);
-    DrawText("Pause: press P or PAUSE. Main menu appears while paused.", 104, 340, 18, kText);
-    DrawText("Guide: press G or GUIDE. Goal: survive and score.", 104, 372, 18, kText);
-    DrawText("Sounds unlock after your first tap, click, or key press.", 104, 404, 18, kMutedText);
+    DrawText("Stats: track time, kills, score, and best run records.", 104, 340, 18, kText);
+    DrawText("Pause: press P or PAUSE. Main menu appears while paused.", 104, 372, 18, kText);
+    DrawText("Guide: press G or GUIDE. Best records clear on main menu.", 104, 404, 18, kText);
+    DrawText("Sounds unlock after your first tap, click, or key press.", 104, 436, 18, kMutedText);
     DrawText("Tap anywhere or press ESC to close.", 104, 466, 18, kMutedText);
 }
 
@@ -690,24 +739,6 @@ bool Game::WasButtonPressed(Rectangle bounds) const
     return false;
 }
 
-bool Game::IsButtonHeld(Rectangle bounds) const
-{
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), bounds))
-    {
-        return true;
-    }
-
-    for (int i = 0; i < GetTouchPointCount(); ++i)
-    {
-        if (CheckCollisionPointRec(GetTouchPosition(i), bounds))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void Game::TryMovePlayer(int dx, int dy)
 {
     const int nextGridX = player_.gridX + dx;
@@ -750,6 +781,7 @@ void Game::Attack()
             SpawnEnemyParticles(enemyCenter);
             enemies_.erase(enemies_.begin() + i);
             score_ += 10;
+            ++kills_;
             ++destroyed;
         }
     }
@@ -1002,36 +1034,6 @@ Rectangle Game::GetPauseMenuButtonBounds() const
     };
 }
 
-Rectangle Game::GetAttackButtonBounds() const
-{
-    return {
-        screenWidth_ - kTouchButtonSize - 22.0f,
-        screenHeight_ - kTouchButtonSize - 24.0f,
-        kTouchButtonSize + 28.0f,
-        kTouchButtonSize
-    };
-}
-
-Rectangle Game::GetUpButtonBounds() const
-{
-    return { 86.0f, screenHeight_ - 176.0f, kTouchButtonSize, kTouchButtonSize };
-}
-
-Rectangle Game::GetDownButtonBounds() const
-{
-    return { 86.0f, screenHeight_ - 64.0f, kTouchButtonSize, kTouchButtonSize };
-}
-
-Rectangle Game::GetLeftButtonBounds() const
-{
-    return { 30.0f, screenHeight_ - 120.0f, kTouchButtonSize, kTouchButtonSize };
-}
-
-Rectangle Game::GetRightButtonBounds() const
-{
-    return { 142.0f, screenHeight_ - 120.0f, kTouchButtonSize, kTouchButtonSize };
-}
-
 Rectangle Game::GetPlayerBounds() const
 {
     return {
@@ -1053,12 +1055,7 @@ Vector2 Game::GetPlayerCenter() const
 
 bool Game::IsPointerOverUi(Vector2 pointer) const
 {
-    bool overUi = CheckCollisionPointRec(pointer, GetGuideButtonBounds())
-        || CheckCollisionPointRec(pointer, GetAttackButtonBounds())
-        || CheckCollisionPointRec(pointer, GetUpButtonBounds())
-        || CheckCollisionPointRec(pointer, GetDownButtonBounds())
-        || CheckCollisionPointRec(pointer, GetLeftButtonBounds())
-        || CheckCollisionPointRec(pointer, GetRightButtonBounds());
+    bool overUi = CheckCollisionPointRec(pointer, GetGuideButtonBounds());
 
     if (state_ == MENU)
     {

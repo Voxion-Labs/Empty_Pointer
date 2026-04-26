@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Empty_Pointer</title>
     <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="assets/logo.svg">
@@ -17,6 +17,7 @@
             height: 100%;
             margin: 0;
             overflow: hidden;
+            overscroll-behavior: none;
             background: #121218;
             color: #eef1f8;
             font-family: "Trebuchet MS", "Segoe UI", sans-serif;
@@ -28,7 +29,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 12px;
+            padding: max(10px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom));
         }
 
         #pageFrame {
@@ -41,13 +42,14 @@
 
         #gameShell {
             position: relative;
-            width: min(calc(100vw - 24px), 800px, calc((100dvh - 112px) * 4 / 3));
+            width: min(calc(100vw - 16px), 800px, calc((100dvh - 104px) * 4 / 3));
             aspect-ratio: 4 / 3;
-            max-height: calc(100dvh - 112px);
+            max-height: calc(100dvh - 104px);
             display: grid;
             place-items: center;
             overflow: hidden;
             background: #121218;
+            flex: 0 0 auto;
         }
 
         canvas {
@@ -78,10 +80,11 @@
         }
 
         .web-controls {
-            width: min(calc(100vw - 24px), 800px);
+            width: min(calc(100vw - 16px), 800px);
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px;
+            flex: 0 0 auto;
         }
 
         .web-button {
@@ -116,7 +119,7 @@
             body {
                 align-items: flex-start;
                 justify-content: center;
-                padding: max(10px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom));
+                padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
             }
 
             #pageFrame {
@@ -125,8 +128,8 @@
             }
 
             #gameShell {
-                width: min(100%, calc((100dvh - 88px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 4 / 3));
-                max-height: calc(100dvh - 88px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                width: min(100%, calc((100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 4 / 3));
+                max-height: calc(100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             }
 
             .web-controls,
@@ -160,6 +163,8 @@
     <script>
         const statusElement = document.getElementById("status");
         const canvas = document.getElementById("canvas");
+        const gameShell = document.getElementById("gameShell");
+        const controls = document.querySelector(".web-controls");
         const gameKeys = new Set([
             "Enter",
             " ",
@@ -186,6 +191,7 @@
 
         window.setPausedUi = function(paused) {
             document.body.classList.toggle("game-paused", Boolean(paused));
+            requestAnimationFrame(fitCanvasToShell);
         };
 
         function unlockAudio() {
@@ -196,10 +202,29 @@
         }
 
         function fitCanvasToShell() {
+            const viewport = window.visualViewport || window;
+            const viewportWidth = Math.max(240, viewport.width || window.innerWidth);
+            const viewportHeight = Math.max(320, viewport.height || window.innerHeight);
+            const controlsHeight = controls.getBoundingClientRect().height || 88;
+            const reservedHeight = controlsHeight + 34;
+            const availableWidth = Math.max(240, viewportWidth - 16);
+            const availableHeight = Math.max(180, viewportHeight - reservedHeight);
+            let width = Math.min(800, availableWidth, availableHeight * 4 / 3);
+            let height = width * 3 / 4;
+
+            if (height > availableHeight) {
+                height = availableHeight;
+                width = height * 4 / 3;
+            }
+
+            gameShell.style.width = `${Math.floor(width)}px`;
+            gameShell.style.height = `${Math.floor(height)}px`;
             canvas.style.width = "100%";
             canvas.style.height = "100%";
             canvas.style.maxWidth = "100%";
             canvas.style.maxHeight = "100%";
+            canvas.width = 800;
+            canvas.height = 600;
         }
 
         function focusGame() {
@@ -227,6 +252,10 @@
         window.addEventListener("load", focusGame);
         window.addEventListener("resize", fitCanvasToShell);
         window.addEventListener("orientationchange", fitCanvasToShell);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", fitCanvasToShell);
+            window.visualViewport.addEventListener("scroll", fitCanvasToShell);
+        }
         window.addEventListener("pointerdown", () => {
             focusGame();
             unlockAudio();

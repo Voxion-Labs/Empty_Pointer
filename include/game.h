@@ -55,6 +55,7 @@ private:
     };
 
     void ResetGame();
+    void ClearRecords();
     void StartGame();
     void TriggerGameOver();
 
@@ -74,13 +75,11 @@ private:
     void DrawButton(Rectangle bounds, const char* text) const;
     void DrawCenteredText(const char* text, int y, int fontSize, Color color) const;
     void DrawHud() const;
-    void DrawMobileControls() const;
     void DrawGuideOverlay() const;
     void DrawPausedOverlay() const;
 
     bool WasActionPressed() const;
     bool WasButtonPressed(Rectangle bounds) const;
-    bool IsButtonHeld(Rectangle bounds) const;
     void TryMovePlayer(int dx, int dy);
     void Attack();
     void SpawnEnemy();
@@ -103,11 +102,6 @@ private:
     Rectangle GetGameOverButtonBounds() const;
     Rectangle GetGuideButtonBounds() const;
     Rectangle GetPauseMenuButtonBounds() const;
-    Rectangle GetAttackButtonBounds() const;
-    Rectangle GetUpButtonBounds() const;
-    Rectangle GetDownButtonBounds() const;
-    Rectangle GetLeftButtonBounds() const;
-    Rectangle GetRightButtonBounds() const;
     Rectangle GetPlayerBounds() const;
     Vector2 GetPlayerCenter() const;
     Vector2 GridToWorld(int gridX, int gridY) const;
@@ -122,6 +116,12 @@ private:
     float enemySpawnInterval_;
     float survivalTime_;
     int score_;
+    int kills_;
+    float bestSurvivalTime_;
+    int bestScore_;
+    int bestKills_;
+    float screenShakeTimer_;
+    float screenShakeMagnitude_;
     bool paused_;
     bool guideOpen_;
     bool inputConsumed_;

@@ -14,6 +14,31 @@ namespace
     }
 }
 
+#ifdef PLATFORM_WEB
+extern "C"
+{
+    EMSCRIPTEN_KEEPALIVE void EP_Start()
+    {
+        g_game->RequestStartOrRestart();
+    }
+
+    EMSCRIPTEN_KEEPALIVE void EP_Guide()
+    {
+        g_game->RequestToggleGuide();
+    }
+
+    EMSCRIPTEN_KEEPALIVE void EP_Pause()
+    {
+        g_game->RequestTogglePause();
+    }
+
+    EMSCRIPTEN_KEEPALIVE void EP_Attack()
+    {
+        g_game->RequestAttack();
+    }
+}
+#endif
+
 int main()
 {
     static Game game(800, 600, "Empty_Pointer");

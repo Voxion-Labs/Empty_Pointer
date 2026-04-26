@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Empty_Pointer</title>
     <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="assets/logo.svg">
@@ -14,7 +14,7 @@
         html,
         body {
             width: 100%;
-            height: 100%;
+            min-height: 100%;
             margin: 0;
             overflow: hidden;
             background: #121218;
@@ -23,13 +23,20 @@
         }
 
         body {
-            display: grid;
-            place-items: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
         }
 
-        main {
-            width: min(100vw, calc(100vh * 4 / 3));
-            height: min(100vh, calc(100vw * 3 / 4));
+        #gameShell {
+            position: relative;
+            width: min(calc(100vw - 20px), calc((100dvh - 20px) * 4 / 3));
+            height: min(calc(100dvh - 20px), calc((100vw - 20px) * 3 / 4));
+            max-width: 800px;
+            max-height: 600px;
             display: grid;
             place-items: center;
             background: #121218;
@@ -60,11 +67,80 @@
             display: none;
         }
 
+        .web-controls {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .web-button {
+            position: absolute;
+            min-width: 82px;
+            min-height: 38px;
+            border: 2px solid #a5ffe1;
+            background: rgba(56, 208, 176, 0.92);
+            color: #081013;
+            font: 800 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: 0;
+            cursor: pointer;
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
+
+        .web-button:hover,
+        .web-button:focus-visible {
+            background: #58f0cf;
+        }
+
+        #webStart {
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+            min-width: 180px;
+        }
+
+        #webGuide {
+            right: 18px;
+            top: 54px;
+        }
+
+        #webPause {
+            left: 18px;
+            top: 18px;
+        }
+
+        #webPulse {
+            right: 18px;
+            bottom: 20px;
+        }
+
+        @media (max-width: 680px), (pointer: coarse) {
+            body {
+                padding: 0;
+            }
+
+            #gameShell {
+                width: min(100vw, calc(100dvh * 4 / 3));
+                height: min(100dvh, calc(100vw * 3 / 4));
+            }
+
+            .web-button {
+                min-width: 76px;
+                min-height: 42px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
-    <main>
+    <main id="gameShell">
         <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0" autofocus></canvas>
+        <div class="web-controls" aria-label="Game controls">
+            <button class="web-button" id="webPause" type="button">PAUSE</button>
+            <button class="web-button" id="webGuide" type="button">GUIDE</button>
+            <button class="web-button" id="webStart" type="button">START / RESTART</button>
+            <button class="web-button" id="webPulse" type="button">PULSE</button>
+        </div>
     </main>
     <div id="status">Loading Empty_Pointer...</div>
 
@@ -89,12 +165,30 @@
             "D",
             "e",
             "E",
+            "g",
+            "G",
             "p",
             "P"
         ]);
 
         function focusGame() {
             canvas.focus({ preventScroll: true });
+        }
+
+        function callGame(name) {
+            focusGame();
+            const fn = Module && Module[name];
+            if (typeof fn === "function") {
+                fn();
+            }
+        }
+
+        function wireButton(id, exportedName) {
+            document.getElementById(id).addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                callGame(exportedName);
+            });
         }
 
         window.addEventListener("load", focusGame);
@@ -106,6 +200,11 @@
 
             focusGame();
         }, { passive: false });
+
+        wireButton("webStart", "_EP_Start");
+        wireButton("webGuide", "_EP_Guide");
+        wireButton("webPause", "_EP_Pause");
+        wireButton("webPulse", "_EP_Attack");
 
         var Module = {
             canvas,

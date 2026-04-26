@@ -23,6 +23,7 @@ WEB_FLAGS := \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s INITIAL_MEMORY=67108864 \
 	-s ASSERTIONS=0 \
+	-s EXPORTED_FUNCTIONS="['_main','_EP_Start','_EP_Guide','_EP_Pause','_EP_Attack']" \
 	--shell-file shell.html
 
 .PHONY: all native web clean

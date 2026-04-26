@@ -3,6 +3,7 @@
 #include "math_utils.h"
 
 #include <cmath>
+#include <vector>
 
 namespace
 {
@@ -44,6 +45,32 @@ namespace
     constexpr Color kButtonText = { 10, 16, 18, 255 };
     constexpr Color kOverlay = { 8, 10, 14, 214 };
     constexpr Color kAttackRing = { 165, 255, 225, 110 };
+
+    Sound CreateToneSound(float frequency, float duration, float volume, float decay)
+    {
+        constexpr int sampleRate = 22050;
+        constexpr float twoPi = 6.28318530718f;
+        const int sampleCount = static_cast<int>(sampleRate * duration);
+        std::vector<short> samples(static_cast<unsigned int>(sampleCount));
+
+        for (int i = 0; i < sampleCount; ++i)
+        {
+            const float t = static_cast<float>(i) / static_cast<float>(sampleRate);
+            const float envelope = std::exp(-decay * t);
+            const float tone = std::sin(twoPi * frequency * t) * 0.72f
+                + std::sin(twoPi * frequency * 2.0f * t) * 0.18f;
+            samples[static_cast<unsigned int>(i)] = static_cast<short>(tone * envelope * volume * 32767.0f);
+        }
+
+        Wave wave = {};
+        wave.frameCount = static_cast<unsigned int>(sampleCount);
+        wave.sampleRate = sampleRate;
+        wave.sampleSize = 16;
+        wave.channels = 1;
+        wave.data = samples.data();
+
+        return LoadSoundFromWave(wave);
+    }
 }
 
 Game::Game()
@@ -66,11 +93,18 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
       inputConsumed_(false),
       touchDownLastFrame_(false),
       touchPressedThisFrame_(false),
+      audioReady_(false),
+      uiSound_(),
+      moveSound_(),
+      pulseSound_(),
+      hitSound_(),
+      gameOverSound_(),
       player_{ columns_ / 2, rows_ / 2, {}, {}, kPlayer, 0.0f, 0.0f, 0.0f },
       enemies_(),
       particles_()
 {
     InitWindow(screenWidth_, screenHeight_, title);
+    InitializeAudio();
     SetTargetFPS(60);
 
     ResetGame();
@@ -79,6 +113,8 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
 
 Game::~Game()
 {
+    ShutdownAudio();
+
     if (IsWindowReady())
     {
         CloseWindow();
@@ -94,6 +130,43 @@ void Game::Tick()
 {
     Update(GetFrameTime());
     Draw();
+}
+
+void Game::RequestStartOrRestart()
+{
+    if (state_ == MENU || state_ == GAMEOVER)
+    {
+        PlayUiSound();
+        StartGame();
+    }
+}
+
+void Game::RequestToggleGuide()
+{
+    PlayUiSound();
+    guideOpen_ = !guideOpen_;
+    if (guideOpen_)
+    {
+        paused_ = false;
+    }
+}
+
+void Game::RequestTogglePause()
+{
+    if (state_ == PLAYING)
+    {
+        PlayUiSound();
+        paused_ = !paused_;
+        guideOpen_ = false;
+    }
+}
+
+void Game::RequestAttack()
+{
+    if (state_ == PLAYING && !paused_ && !guideOpen_)
+    {
+        Attack();
+    }
 }
 
 void Game::ResetGame()
@@ -133,6 +206,7 @@ void Game::TriggerGameOver()
     }
 
     SpawnDeathParticles();
+    PlayGameOverSound();
     state_ = GAMEOVER;
 }
 
@@ -168,6 +242,7 @@ void Game::UpdateMenu()
 
     if (WasActionPressed())
     {
+        PlayUiSound();
         StartGame();
     }
 }
@@ -242,14 +317,16 @@ void Game::UpdateGameOver(float deltaTime)
 
     if (WasActionPressed())
     {
+        PlayUiSound();
         StartGame();
     }
 }
 
 void Game::UpdatePauseAndGuideInput()
 {
-    if (WasButtonPressed(GetGuideButtonBounds()))
+    if (WasButtonPressed(GetGuideButtonBounds()) || IsKeyPressed(KEY_G))
     {
+        PlayUiSound();
         guideOpen_ = !guideOpen_;
         if (guideOpen_)
         {
@@ -261,6 +338,7 @@ void Game::UpdatePauseAndGuideInput()
 
     if (guideOpen_ && (IsKeyPressed(KEY_ESCAPE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || touchPressedThisFrame_))
     {
+        PlayUiSound();
         guideOpen_ = false;
         inputConsumed_ = true;
         return;
@@ -268,6 +346,7 @@ void Game::UpdatePauseAndGuideInput()
 
     if (state_ == PLAYING && IsKeyPressed(KEY_P))
     {
+        PlayUiSound();
         paused_ = !paused_;
         guideOpen_ = false;
     }
@@ -607,6 +686,7 @@ void Game::TryMovePlayer(int dx, int dy)
     player_.gridX = nextGridX;
     player_.gridY = nextGridY;
     player_.targetPosition = GridToWorld(player_.gridX, player_.gridY);
+    PlayMoveSound();
 }
 
 void Game::Attack()
@@ -619,6 +699,7 @@ void Game::Attack()
     const Vector2 playerCenter = GetPlayerCenter();
     player_.attackCooldown = kAttackCooldown;
     player_.attackFlashTimer = kAttackFlashTime;
+    PlayPulseSound();
 
     for (int i = static_cast<int>(enemies_.size()) - 1; i >= 0; --i)
     {
@@ -631,6 +712,7 @@ void Game::Attack()
         const Vector2 delta = math::Sub(enemyCenter, playerCenter);
         if (math::LengthSqr(delta) <= kAttackRadius * kAttackRadius)
         {
+            PlayEnemyHitSound();
             SpawnEnemyParticles(enemyCenter);
             enemies_.erase(enemies_.begin() + i);
             score_ += 10;
@@ -683,6 +765,80 @@ void Game::SpawnEnemy()
 bool Game::IsPlayerReadyForThreats() const
 {
     return survivalTime_ >= kOpeningGraceSeconds;
+}
+
+void Game::InitializeAudio()
+{
+    InitAudioDevice();
+    audioReady_ = IsAudioDeviceReady();
+
+    if (!audioReady_)
+    {
+        return;
+    }
+
+    SetMasterVolume(0.55f);
+    uiSound_ = CreateToneSound(520.0f, 0.055f, 0.18f, 24.0f);
+    moveSound_ = CreateToneSound(340.0f, 0.035f, 0.11f, 28.0f);
+    pulseSound_ = CreateToneSound(190.0f, 0.13f, 0.22f, 12.0f);
+    hitSound_ = CreateToneSound(760.0f, 0.075f, 0.18f, 22.0f);
+    gameOverSound_ = CreateToneSound(120.0f, 0.32f, 0.20f, 6.5f);
+}
+
+void Game::ShutdownAudio()
+{
+    if (!audioReady_)
+    {
+        return;
+    }
+
+    UnloadSound(uiSound_);
+    UnloadSound(moveSound_);
+    UnloadSound(pulseSound_);
+    UnloadSound(hitSound_);
+    UnloadSound(gameOverSound_);
+    CloseAudioDevice();
+    audioReady_ = false;
+}
+
+void Game::PlayUiSound() const
+{
+    if (audioReady_)
+    {
+        PlaySound(uiSound_);
+    }
+}
+
+void Game::PlayMoveSound() const
+{
+    if (audioReady_)
+    {
+        PlaySound(moveSound_);
+    }
+}
+
+void Game::PlayPulseSound() const
+{
+    if (audioReady_)
+    {
+        PlaySound(pulseSound_);
+    }
+}
+
+void Game::PlayEnemyHitSound() const
+{
+    if (audioReady_)
+    {
+        PlaySound(hitSound_);
+    }
+}
+
+void Game::PlayGameOverSound() const
+{
+    if (audioReady_)
+    {
+        PlaySound(gameOverSound_);
+    }
 }
 
 void Game::SpawnDeathParticles()

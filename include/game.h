@@ -24,6 +24,10 @@ public:
 
     bool ShouldClose() const;
     void Tick();
+    void RequestStartOrRestart();
+    void RequestToggleGuide();
+    void RequestTogglePause();
+    void RequestAttack();
 
 private:
     struct Player
@@ -81,6 +85,13 @@ private:
     void SpawnDeathParticles();
     void SpawnEnemyParticles(Vector2 center);
     bool IsPlayerReadyForThreats() const;
+    void InitializeAudio();
+    void ShutdownAudio();
+    void PlayUiSound() const;
+    void PlayMoveSound() const;
+    void PlayPulseSound() const;
+    void PlayEnemyHitSound() const;
+    void PlayGameOverSound() const;
 
     Rectangle GetMenuButtonBounds() const;
     Rectangle GetGameOverButtonBounds() const;
@@ -109,6 +120,12 @@ private:
     bool inputConsumed_;
     bool touchDownLastFrame_;
     bool touchPressedThisFrame_;
+    bool audioReady_;
+    Sound uiSound_;
+    Sound moveSound_;
+    Sound pulseSound_;
+    Sound hitSound_;
+    Sound gameOverSound_;
     Player player_;
     std::vector<Enemy> enemies_;
     std::vector<Particle> particles_;

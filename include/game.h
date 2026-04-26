@@ -33,6 +33,9 @@ private:
         Vector2 drawPosition;
         Vector2 targetPosition;
         Color color;
+        float moveTimer;
+        float attackCooldown;
+        float attackFlashTimer;
     };
 
     struct Particle
@@ -54,6 +57,9 @@ private:
     void UpdatePlaying(float deltaTime);
     void UpdateGameOver(float deltaTime);
     void UpdateParticles(float deltaTime);
+    void UpdatePauseAndGuideInput();
+    void UpdatePlayerInput(float deltaTime);
+    void UpdatePointerInput();
 
     void Draw() const;
     void DrawGrid() const;
@@ -61,18 +67,33 @@ private:
     void DrawParticles() const;
     void DrawButton(Rectangle bounds, const char* text) const;
     void DrawCenteredText(const char* text, int y, int fontSize, Color color) const;
+    void DrawHud() const;
+    void DrawMobileControls() const;
+    void DrawGuideOverlay() const;
+    void DrawPausedOverlay() const;
 
     bool WasActionPressed() const;
+    bool WasButtonPressed(Rectangle bounds) const;
+    bool IsButtonHeld(Rectangle bounds) const;
     void TryMovePlayer(int dx, int dy);
+    void Attack();
     void SpawnEnemy();
     void SpawnDeathParticles();
+    void SpawnEnemyParticles(Vector2 center);
     bool IsPlayerReadyForThreats() const;
 
     Rectangle GetMenuButtonBounds() const;
     Rectangle GetGameOverButtonBounds() const;
+    Rectangle GetGuideButtonBounds() const;
+    Rectangle GetAttackButtonBounds() const;
+    Rectangle GetUpButtonBounds() const;
+    Rectangle GetDownButtonBounds() const;
+    Rectangle GetLeftButtonBounds() const;
+    Rectangle GetRightButtonBounds() const;
     Rectangle GetPlayerBounds() const;
     Vector2 GetPlayerCenter() const;
     Vector2 GridToWorld(int gridX, int gridY) const;
+    bool IsPointerOverUi(Vector2 pointer) const;
 
     GameState state_;
     int screenWidth_;
@@ -82,6 +103,12 @@ private:
     float enemySpawnTimer_;
     float enemySpawnInterval_;
     float survivalTime_;
+    int score_;
+    bool paused_;
+    bool guideOpen_;
+    bool inputConsumed_;
+    bool touchDownLastFrame_;
+    bool touchPressedThisFrame_;
     Player player_;
     std::vector<Enemy> enemies_;
     std::vector<Particle> particles_;

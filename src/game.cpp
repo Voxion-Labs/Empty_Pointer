@@ -10,6 +10,7 @@ namespace
     constexpr float kPlayerPadding = 6.0f;
     constexpr float kMoveLerpSpeed = 14.0f;
     constexpr float kSnapDistanceSqr = 0.04f;
+    constexpr float kHeldMoveInterval = 0.13f;
 
     constexpr float kEnemySize = 28.0f;
     constexpr float kEnemyBaseSpeed = 92.0f;
@@ -24,6 +25,12 @@ namespace
     constexpr float kParticleDrag = 6.0f;
     constexpr float kButtonWidth = 260.0f;
     constexpr float kButtonHeight = 52.0f;
+    constexpr float kSmallButtonWidth = 112.0f;
+    constexpr float kSmallButtonHeight = 38.0f;
+    constexpr float kTouchButtonSize = 54.0f;
+    constexpr float kAttackRadius = 92.0f;
+    constexpr float kAttackCooldown = 1.15f;
+    constexpr float kAttackFlashTime = 0.18f;
 
     constexpr Color kBackground = { 18, 18, 24, 255 };
     constexpr Color kGridLine = { 42, 44, 54, 255 };
@@ -35,6 +42,8 @@ namespace
     constexpr Color kButton = { 38, 168, 142, 255 };
     constexpr Color kButtonHover = { 56, 208, 176, 255 };
     constexpr Color kButtonText = { 10, 16, 18, 255 };
+    constexpr Color kOverlay = { 8, 10, 14, 214 };
+    constexpr Color kAttackRing = { 165, 255, 225, 110 };
 }
 
 Game::Game()
@@ -51,7 +60,13 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
       enemySpawnTimer_(0.0f),
       enemySpawnInterval_(kInitialSpawnInterval),
       survivalTime_(0.0f),
-      player_{ columns_ / 2, rows_ / 2, {}, {}, kPlayer },
+      score_(0),
+      paused_(false),
+      guideOpen_(false),
+      inputConsumed_(false),
+      touchDownLastFrame_(false),
+      touchPressedThisFrame_(false),
+      player_{ columns_ / 2, rows_ / 2, {}, {}, kPlayer, 0.0f, 0.0f, 0.0f },
       enemies_(),
       particles_()
 {
@@ -88,10 +103,17 @@ void Game::ResetGame()
     player_.color = kPlayer;
     player_.targetPosition = GridToWorld(player_.gridX, player_.gridY);
     player_.drawPosition = player_.targetPosition;
+    player_.moveTimer = 0.0f;
+    player_.attackCooldown = 0.0f;
+    player_.attackFlashTimer = 0.0f;
 
     enemySpawnTimer_ = 0.0f;
     enemySpawnInterval_ = kInitialSpawnInterval;
     survivalTime_ = 0.0f;
+    score_ = 0;
+    paused_ = false;
+    guideOpen_ = false;
+    inputConsumed_ = false;
     enemies_.clear();
     particles_.clear();
 }
@@ -116,6 +138,13 @@ void Game::TriggerGameOver()
 
 void Game::Update(float deltaTime)
 {
+    const bool touchDown = GetTouchPointCount() > 0;
+    touchPressedThisFrame_ = touchDown && !touchDownLastFrame_;
+    touchDownLastFrame_ = touchDown;
+
+    inputConsumed_ = false;
+    UpdatePauseAndGuideInput();
+
     switch (state_)
     {
     case MENU:
@@ -132,6 +161,11 @@ void Game::Update(float deltaTime)
 
 void Game::UpdateMenu()
 {
+    if (inputConsumed_)
+    {
+        return;
+    }
+
     if (WasActionPressed())
     {
         StartGame();
@@ -140,30 +174,13 @@ void Game::UpdateMenu()
 
 void Game::UpdatePlaying(float deltaTime)
 {
-    int dx = 0;
-    int dy = 0;
-
-    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT))
+    if (paused_ || guideOpen_)
     {
-        dx = -1;
-    }
-    else if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT))
-    {
-        dx = 1;
-    }
-    else if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP))
-    {
-        dy = -1;
-    }
-    else if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN))
-    {
-        dy = 1;
+        return;
     }
 
-    if (dx != 0 || dy != 0)
-    {
-        TryMovePlayer(dx, dy);
-    }
+    UpdatePlayerInput(deltaTime);
+    UpdatePointerInput();
 
     player_.drawPosition = math::Lerp(
         player_.drawPosition,
@@ -174,6 +191,16 @@ void Game::UpdatePlaying(float deltaTime)
     if (math::LengthSqr(math::Sub(player_.targetPosition, player_.drawPosition)) <= kSnapDistanceSqr)
     {
         player_.drawPosition = player_.targetPosition;
+    }
+
+    if (player_.attackCooldown > 0.0f)
+    {
+        player_.attackCooldown -= deltaTime;
+    }
+
+    if (player_.attackFlashTimer > 0.0f)
+    {
+        player_.attackFlashTimer -= deltaTime;
     }
 
     survivalTime_ += deltaTime;
@@ -208,10 +235,122 @@ void Game::UpdateGameOver(float deltaTime)
 {
     UpdateParticles(deltaTime);
 
+    if (inputConsumed_)
+    {
+        return;
+    }
+
     if (WasActionPressed())
     {
         StartGame();
     }
+}
+
+void Game::UpdatePauseAndGuideInput()
+{
+    if (WasButtonPressed(GetGuideButtonBounds()))
+    {
+        guideOpen_ = !guideOpen_;
+        if (guideOpen_)
+        {
+            paused_ = false;
+        }
+        inputConsumed_ = true;
+        return;
+    }
+
+    if (guideOpen_ && (IsKeyPressed(KEY_ESCAPE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || touchPressedThisFrame_))
+    {
+        guideOpen_ = false;
+        inputConsumed_ = true;
+        return;
+    }
+
+    if (state_ == PLAYING && IsKeyPressed(KEY_P))
+    {
+        paused_ = !paused_;
+        guideOpen_ = false;
+    }
+}
+
+void Game::UpdatePlayerInput(float deltaTime)
+{
+    int dx = 0;
+    int dy = 0;
+
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT) || IsButtonHeld(GetLeftButtonBounds()))
+    {
+        dx = -1;
+    }
+    else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT) || IsButtonHeld(GetRightButtonBounds()))
+    {
+        dx = 1;
+    }
+    else if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP) || IsButtonHeld(GetUpButtonBounds()))
+    {
+        dy = -1;
+    }
+    else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN) || IsButtonHeld(GetDownButtonBounds()))
+    {
+        dy = 1;
+    }
+
+    if (IsKeyPressed(KEY_E) || IsButtonHeld(GetAttackButtonBounds()))
+    {
+        Attack();
+    }
+
+    if (dx == 0 && dy == 0)
+    {
+        player_.moveTimer = 0.0f;
+        return;
+    }
+
+    player_.moveTimer -= deltaTime;
+    if (player_.moveTimer <= 0.0f)
+    {
+        TryMovePlayer(dx, dy);
+        player_.moveTimer = kHeldMoveInterval;
+    }
+}
+
+void Game::UpdatePointerInput()
+{
+    bool hasPointerPress = false;
+    Vector2 pointer = {};
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        hasPointerPress = true;
+        pointer = GetMousePosition();
+    }
+    else if (GetTouchPointCount() > 0)
+    {
+        hasPointerPress = true;
+        pointer = GetTouchPosition(0);
+    }
+
+    if (!hasPointerPress)
+    {
+        return;
+    }
+
+    if (IsPointerOverUi(pointer))
+    {
+        return;
+    }
+
+    const int gridX = static_cast<int>(pointer.x) / kCellSize;
+    const int gridY = static_cast<int>(pointer.y) / kCellSize;
+
+    if (gridX < 0 || gridX >= columns_ || gridY < 0 || gridY >= rows_)
+    {
+        return;
+    }
+
+    player_.gridX = gridX;
+    player_.gridY = gridY;
+    player_.targetPosition = GridToWorld(player_.gridX, player_.gridY);
 }
 
 void Game::UpdateParticles(float deltaTime)
@@ -251,6 +390,7 @@ void Game::Draw() const
     }
 
     DrawParticles();
+    DrawHud();
 
     switch (state_)
     {
@@ -268,6 +408,18 @@ void Game::Draw() const
         DrawCenteredText("Press ENTER or click RESTART", screenHeight_ / 2 + 32, 22, kMutedText);
         DrawButton(GetGameOverButtonBounds(), "RESTART");
         break;
+    }
+
+    DrawMobileControls();
+
+    if (paused_)
+    {
+        DrawPausedOverlay();
+    }
+
+    if (guideOpen_)
+    {
+        DrawGuideOverlay();
     }
 
     EndDrawing();
@@ -291,6 +443,16 @@ void Game::DrawPlayer() const
     const Rectangle playerRect = GetPlayerBounds();
     DrawRectangleRec(playerRect, player_.color);
     DrawRectangleLinesEx(playerRect, 2.0f, kPlayerAccent);
+
+    if (player_.attackFlashTimer > 0.0f)
+    {
+        DrawCircleLines(
+            static_cast<int>(GetPlayerCenter().x),
+            static_cast<int>(GetPlayerCenter().y),
+            kAttackRadius,
+            kAttackRing
+        );
+    }
 }
 
 void Game::DrawParticles() const
@@ -317,6 +479,54 @@ void Game::DrawButton(Rectangle bounds, const char* text) const
     DrawText(text, textX, textY, fontSize, kButtonText);
 }
 
+void Game::DrawHud() const
+{
+    DrawButton(GetGuideButtonBounds(), guideOpen_ ? "CLOSE" : "GUIDE");
+
+    if (state_ == PLAYING)
+    {
+        DrawText(TextFormat("SCORE %d", score_), 18, 44, 20, kText);
+        DrawText(TextFormat("PULSE %.1f", player_.attackCooldown > 0.0f ? player_.attackCooldown : 0.0f), 18, 70, 18, kMutedText);
+        DrawText("P: PAUSE", screenWidth_ - 116, 18, 18, kMutedText);
+    }
+}
+
+void Game::DrawMobileControls() const
+{
+    if (state_ != PLAYING || paused_ || guideOpen_)
+    {
+        return;
+    }
+
+    DrawButton(GetUpButtonBounds(), "^");
+    DrawButton(GetLeftButtonBounds(), "<");
+    DrawButton(GetDownButtonBounds(), "v");
+    DrawButton(GetRightButtonBounds(), ">");
+    DrawButton(GetAttackButtonBounds(), "PULSE");
+}
+
+void Game::DrawGuideOverlay() const
+{
+    const Rectangle panel = { 90.0f, 92.0f, 620.0f, 392.0f };
+    DrawRectangleRec(panel, kOverlay);
+    DrawRectangleLinesEx(panel, 2.0f, kPlayerAccent);
+
+    DrawCenteredText("HOW TO PLAY", 118, 30, kText);
+    DrawText("Move: hold WASD, arrow keys, or on-screen arrows.", 126, 172, 20, kText);
+    DrawText("Mouse / touch: tap a grid cell to move there.", 126, 206, 20, kText);
+    DrawText("Destroy enemies: press E or tap PULSE.", 126, 240, 20, kText);
+    DrawText("Pause: press P anytime during play.", 126, 274, 20, kText);
+    DrawText("Goal: survive, dodge, and build your score.", 126, 308, 20, kText);
+    DrawText("Tap anywhere or press ESC to close.", 126, 362, 20, kMutedText);
+}
+
+void Game::DrawPausedOverlay() const
+{
+    DrawRectangle(0, 0, screenWidth_, screenHeight_, kOverlay);
+    DrawCenteredText("PAUSED", screenHeight_ / 2 - 38, 42, kText);
+    DrawCenteredText("Press P to resume", screenHeight_ / 2 + 18, 22, kMutedText);
+}
+
 void Game::DrawCenteredText(const char* text, int y, int fontSize, Color color) const
 {
     const int width = MeasureText(text, fontSize);
@@ -330,20 +540,55 @@ bool Game::WasActionPressed() const
         return true;
     }
 
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-    {
-        return false;
-    }
-
-    const Vector2 mousePosition = GetMousePosition();
     if (state_ == MENU)
     {
-        return CheckCollisionPointRec(mousePosition, GetMenuButtonBounds());
+        return WasButtonPressed(GetMenuButtonBounds());
     }
 
     if (state_ == GAMEOVER)
     {
-        return CheckCollisionPointRec(mousePosition, GetGameOverButtonBounds());
+        return WasButtonPressed(GetGameOverButtonBounds());
+    }
+
+    return false;
+}
+
+bool Game::WasButtonPressed(Rectangle bounds) const
+{
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), bounds))
+    {
+        return true;
+    }
+
+    if (!touchPressedThisFrame_)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < GetTouchPointCount(); ++i)
+    {
+        if (CheckCollisionPointRec(GetTouchPosition(i), bounds))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Game::IsButtonHeld(Rectangle bounds) const
+{
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), bounds))
+    {
+        return true;
+    }
+
+    for (int i = 0; i < GetTouchPointCount(); ++i)
+    {
+        if (CheckCollisionPointRec(GetTouchPosition(i), bounds))
+        {
+            return true;
+        }
     }
 
     return false;
@@ -362,6 +607,35 @@ void Game::TryMovePlayer(int dx, int dy)
     player_.gridX = nextGridX;
     player_.gridY = nextGridY;
     player_.targetPosition = GridToWorld(player_.gridX, player_.gridY);
+}
+
+void Game::Attack()
+{
+    if (player_.attackCooldown > 0.0f)
+    {
+        return;
+    }
+
+    const Vector2 playerCenter = GetPlayerCenter();
+    player_.attackCooldown = kAttackCooldown;
+    player_.attackFlashTimer = kAttackFlashTime;
+
+    for (int i = static_cast<int>(enemies_.size()) - 1; i >= 0; --i)
+    {
+        const Rectangle bounds = enemies_[i].GetBounds();
+        const Vector2 enemyCenter = {
+            bounds.x + bounds.width * 0.5f,
+            bounds.y + bounds.height * 0.5f
+        };
+
+        const Vector2 delta = math::Sub(enemyCenter, playerCenter);
+        if (math::LengthSqr(delta) <= kAttackRadius * kAttackRadius)
+        {
+            SpawnEnemyParticles(enemyCenter);
+            enemies_.erase(enemies_.begin() + i);
+            score_ += 10;
+        }
+    }
 }
 
 void Game::SpawnEnemy()
@@ -437,6 +711,25 @@ void Game::SpawnDeathParticles()
     }
 }
 
+void Game::SpawnEnemyParticles(Vector2 center)
+{
+    for (int i = 0; i < 8; ++i)
+    {
+        const float angle = static_cast<float>(GetRandomValue(0, 359)) * DEG2RAD;
+        const float speed = static_cast<float>(GetRandomValue(70, 180));
+
+        Particle particle = {};
+        particle.position = center;
+        particle.velocity = { std::cos(angle) * speed, std::sin(angle) * speed };
+        particle.size = static_cast<float>(GetRandomValue(2, 5));
+        particle.life = 0.36f;
+        particle.maxLife = 0.36f;
+        particle.color = kDanger;
+
+        particles_.push_back(particle);
+    }
+}
+
 Rectangle Game::GetMenuButtonBounds() const
 {
     return {
@@ -457,6 +750,41 @@ Rectangle Game::GetGameOverButtonBounds() const
     };
 }
 
+Rectangle Game::GetGuideButtonBounds() const
+{
+    return { screenWidth_ - 130.0f, 54.0f, kSmallButtonWidth, kSmallButtonHeight };
+}
+
+Rectangle Game::GetAttackButtonBounds() const
+{
+    return {
+        screenWidth_ - kTouchButtonSize - 22.0f,
+        screenHeight_ - kTouchButtonSize - 24.0f,
+        kTouchButtonSize + 28.0f,
+        kTouchButtonSize
+    };
+}
+
+Rectangle Game::GetUpButtonBounds() const
+{
+    return { 86.0f, screenHeight_ - 176.0f, kTouchButtonSize, kTouchButtonSize };
+}
+
+Rectangle Game::GetDownButtonBounds() const
+{
+    return { 86.0f, screenHeight_ - 64.0f, kTouchButtonSize, kTouchButtonSize };
+}
+
+Rectangle Game::GetLeftButtonBounds() const
+{
+    return { 30.0f, screenHeight_ - 120.0f, kTouchButtonSize, kTouchButtonSize };
+}
+
+Rectangle Game::GetRightButtonBounds() const
+{
+    return { 142.0f, screenHeight_ - 120.0f, kTouchButtonSize, kTouchButtonSize };
+}
+
 Rectangle Game::GetPlayerBounds() const
 {
     return {
@@ -474,6 +802,27 @@ Vector2 Game::GetPlayerCenter() const
         bounds.x + bounds.width * 0.5f,
         bounds.y + bounds.height * 0.5f
     };
+}
+
+bool Game::IsPointerOverUi(Vector2 pointer) const
+{
+    bool overUi = CheckCollisionPointRec(pointer, GetGuideButtonBounds())
+        || CheckCollisionPointRec(pointer, GetAttackButtonBounds())
+        || CheckCollisionPointRec(pointer, GetUpButtonBounds())
+        || CheckCollisionPointRec(pointer, GetDownButtonBounds())
+        || CheckCollisionPointRec(pointer, GetLeftButtonBounds())
+        || CheckCollisionPointRec(pointer, GetRightButtonBounds());
+
+    if (state_ == MENU)
+    {
+        overUi = overUi || CheckCollisionPointRec(pointer, GetMenuButtonBounds());
+    }
+    else if (state_ == GAMEOVER)
+    {
+        overUi = overUi || CheckCollisionPointRec(pointer, GetGameOverButtonBounds());
+    }
+
+    return overUi;
 }
 
 Vector2 Game::GridToWorld(int gridX, int gridY) const

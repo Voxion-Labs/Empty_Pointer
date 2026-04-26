@@ -40,6 +40,8 @@ web: $(PUBLIC_DIR)/index.html
 $(PUBLIC_DIR)/index.html: $(SOURCES) shell.html
 	mkdir -p $(PUBLIC_DIR)
 	$(EMXX) $(SOURCES) $(WEB_FLAGS) -o $@
+	mkdir -p $(PUBLIC_DIR)/assets
+	cp assets/logo.svg $(PUBLIC_DIR)/assets/logo.svg
 	touch $(PUBLIC_DIR)/.nojekyll
 
 clean:

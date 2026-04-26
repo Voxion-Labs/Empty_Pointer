@@ -28,7 +28,7 @@ jobs:
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v16
         with:
-          version: latest
+          version: 3.1.70
 
       - name: Verify build tools
         run: |
@@ -53,7 +53,11 @@ jobs:
           test -f public/index.html
           test -f public/index.js
           test -f public/index.wasm
+          test -f public/assets/logo.svg
           ls -lah public
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

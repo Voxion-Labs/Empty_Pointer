@@ -30,7 +30,11 @@ Empty_Pointer is a lightweight arcade survival game where the player moves acros
 ## Controls
 
 - `ENTER`, `SPACE`, or `START / RESTART` button: start or restart.
-- `WASD` or arrow keys: move.
+- Hold `WASD`, arrow keys, or the on-screen arrows: move.
+- Tap or click a grid cell: move toward that cell.
+- `E` or `PULSE`: destroy nearby enemies when the pulse is ready.
+- `P`: pause or resume the game.
+- `GUIDE`: open the in-game controls panel.
 - Avoid enemies for as long as possible.
 
 ## GitHub Pages Deployment

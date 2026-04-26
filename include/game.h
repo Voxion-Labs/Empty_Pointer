@@ -75,6 +75,7 @@ private:
     void DrawButton(Rectangle bounds, const char* text) const;
     void DrawCenteredText(const char* text, int y, int fontSize, Color color) const;
     void DrawHud() const;
+    void DrawBossWarning() const;
     void DrawGuideOverlay() const;
     void DrawPausedOverlay() const;
 

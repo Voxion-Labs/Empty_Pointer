@@ -55,7 +55,7 @@ Survive as long as possible while enemies enter from the grid edges and chase th
 
 Use movement to keep distance, then use `PULSE` when enemies get close. The pulse checks against enemy rectangles, so it can destroy enemies near the player even if their centers are not perfectly inside the ring. The pulse has a short cooldown, shown in the HUD.
 
-Every 20 kills triggers a boss encounter. A dark purple boss enters with five small escort enemies, then all of them chase the player. A red warning appears for 3 seconds and a short alert sound plays when the boss arrives. The boss is slower than normal enemies, but it has a visible circular aura that instantly kills the player on contact. It takes two pulse hits to destroy the boss.
+Every 20 kills triggers a boss encounter. A dark purple boss enters with five small escort enemies, then all of them chase the player. A red warning banner appears for 3 seconds and a short alert sound plays when the boss arrives. The boss is slower than normal enemies, but it has a visible circular aura that instantly kills the player on contact. It takes two pulse hits to destroy the boss.
 
 The game tracks your survival time, kills, and score during each run. After a game over, the best time, best score, and best kill count stay visible while you keep retrying. Returning to the main menu clears those temporary records for a fresh session.
 

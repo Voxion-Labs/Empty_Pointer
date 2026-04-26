@@ -585,6 +585,7 @@ void Game::Draw() const
     EndMode2D();
 
     DrawHud();
+    DrawBossWarning();
 
     switch (state_)
     {
@@ -681,19 +682,31 @@ void Game::DrawHud() const
         DrawText(TextFormat("SCORE %d", score_), 18, 44, 20, kText);
         DrawText(TextFormat("KILLS %d", kills_), 18, 70, 20, kText);
         DrawText(TextFormat("PULSE %.1f", player_.attackCooldown > 0.0f ? player_.attackCooldown : 0.0f), 18, 96, 18, kMutedText);
-        if (bossWarningTimer_ > 0.0f)
-        {
-            DrawText("BOSS INCOMING", screenWidth_ - 196, 18, 18, kBossWarning);
-        }
-        else
-        {
-            DrawText("P: PAUSE", screenWidth_ - 116, 18, 18, kMutedText);
-        }
+        DrawText("P: PAUSE", screenWidth_ - 116, 18, 18, kMutedText);
     }
     else if (state_ == GAMEOVER)
     {
         DrawText(TextFormat("BEST %.1fs  %d pts  %d kills", bestSurvivalTime_, bestScore_, bestKills_), 18, 18, 18, kMutedText);
     }
+}
+
+void Game::DrawBossWarning() const
+{
+    if (state_ != PLAYING || bossWarningTimer_ <= 0.0f)
+    {
+        return;
+    }
+
+    const Rectangle banner = {
+        screenWidth_ - 318.0f,
+        72.0f,
+        300.0f,
+        40.0f
+    };
+
+    DrawRectangleRec(banner, { 42, 8, 14, 245 });
+    DrawRectangleLinesEx(banner, 2.0f, kBossWarning);
+    DrawText("WARNING: BOSS INCOMING", static_cast<int>(banner.x + 15.0f), static_cast<int>(banner.y + 11.0f), 18, kBossWarning);
 }
 
 void Game::DrawGuideOverlay() const
@@ -841,6 +854,12 @@ void Game::Attack()
     if (pulseHits > 0)
     {
         PlayEnemyHitSound();
+    }
+
+    if (kills_ >= nextBossKillTarget_ && !HasActiveBoss())
+    {
+        SpawnBossEncounter();
+        nextBossKillTarget_ += kBossKillInterval;
     }
 }
 
@@ -1021,7 +1040,7 @@ void Game::InitializeAudio()
     pulseSound_ = CreateToneSound(190.0f, 0.13f, 0.22f, 12.0f);
     hitSound_ = CreateToneSound(760.0f, 0.075f, 0.18f, 22.0f);
     gameOverSound_ = CreateToneSound(120.0f, 0.32f, 0.20f, 6.5f);
-    bossWarningSound_ = CreateToneSound(96.0f, 0.42f, 0.18f, 5.2f);
+    bossWarningSound_ = CreateToneSound(220.0f, 0.50f, 0.34f, 4.2f);
 }
 
 void Game::ShutdownAudio()

@@ -31,6 +31,7 @@ Empty_Pointer is a lightweight arcade survival game where the player moves acros
 - Player death particles for extra impact.
 - Light screen shake on death.
 - Pulse attack for clearing nearby enemies.
+- Boss encounters after every 20 kills, with a slow purple boss and escort enemies.
 - Run stats for survival time, kills, score, and best records.
 - Pause screen with a return-to-main-menu option.
 - Mobile-friendly browser controls below the game canvas.
@@ -54,11 +55,15 @@ Survive as long as possible while enemies enter from the grid edges and chase th
 
 Use movement to keep distance, then use `PULSE` when enemies get close. The pulse checks against enemy rectangles, so it can destroy enemies near the player even if their centers are not perfectly inside the ring. The pulse has a short cooldown, shown in the HUD.
 
+Every 20 kills triggers a boss encounter. A dark purple boss enters with five small escort enemies, then all of them chase the player. The boss is slower than normal enemies, but it has a visible circular aura that instantly kills the player on contact. It takes two pulse hits to destroy the boss.
+
 The game tracks your survival time, kills, and score during each run. After a game over, the best time, best score, and best kill count stay visible while you keep retrying. Returning to the main menu clears those temporary records for a fresh session.
 
 Tips:
 
 - Do not spam pulse when enemies are far away; save it for clusters.
+- When the red boss warning appears, create distance before the escort enemies spread out.
+- Stay outside the boss aura first, then pulse when the boss is close enough.
 - Move diagonally by alternating horizontal and vertical moves.
 - On mobile, use the browser control dock below the canvas for reliable buttons.
 - The canvas is locked to a 4:3 fit on phones, so rotate once or hard refresh if an old cached build still looks zoomed.

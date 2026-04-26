@@ -23,6 +23,12 @@ namespace
     constexpr float kInitialSpawnInterval = 1.15f;
     constexpr float kMinSpawnInterval = 0.34f;
     constexpr float kOpeningGraceSeconds = 0.55f;
+    constexpr int kBossKillInterval = 20;
+    constexpr int kBossEscortCount = 5;
+    constexpr float kBossSize = 68.0f;
+    constexpr float kBossSpeed = 42.0f;
+    constexpr float kBossAuraRadius = 62.0f;
+    constexpr float kBossWarningTime = 2.0f;
 
     constexpr float kParticleMinSpeed = 90.0f;
     constexpr float kParticleMaxSpeed = 260.0f;
@@ -43,6 +49,7 @@ namespace
     constexpr Color kText = { 232, 236, 244, 255 };
     constexpr Color kMutedText = { 150, 156, 170, 255 };
     constexpr Color kDanger = { 255, 92, 108, 255 };
+    constexpr Color kBossWarning = { 255, 55, 72, 255 };
     constexpr Color kButton = { 38, 168, 142, 255 };
     constexpr Color kButtonHover = { 56, 208, 176, 255 };
     constexpr Color kButtonText = { 10, 16, 18, 255 };
@@ -93,11 +100,13 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
       survivalTime_(0.0f),
       score_(0),
       kills_(0),
+      nextBossKillTarget_(kBossKillInterval),
       bestSurvivalTime_(0.0f),
       bestScore_(0),
       bestKills_(0),
       screenShakeTimer_(0.0f),
       screenShakeMagnitude_(0.0f),
+      bossWarningTimer_(0.0f),
       paused_(false),
       guideOpen_(false),
       inputConsumed_(false),
@@ -210,8 +219,10 @@ void Game::ResetGame()
     survivalTime_ = 0.0f;
     score_ = 0;
     kills_ = 0;
+    nextBossKillTarget_ = kBossKillInterval;
     screenShakeTimer_ = 0.0f;
     screenShakeMagnitude_ = 0.0f;
+    bossWarningTimer_ = 0.0f;
     SetPaused(false);
     guideOpen_ = false;
     inputConsumed_ = false;
@@ -340,6 +351,21 @@ void Game::UpdatePlaying(float deltaTime)
         player_.attackFlashTimer -= deltaTime;
     }
 
+    if (bossWarningTimer_ > 0.0f)
+    {
+        bossWarningTimer_ -= deltaTime;
+        if (bossWarningTimer_ < 0.0f)
+        {
+            bossWarningTimer_ = 0.0f;
+        }
+    }
+
+    if (kills_ >= nextBossKillTarget_ && !HasActiveBoss())
+    {
+        SpawnBossEncounter();
+        nextBossKillTarget_ += kBossKillInterval;
+    }
+
     survivalTime_ += deltaTime;
     enemySpawnTimer_ += deltaTime;
     enemySpawnInterval_ = kInitialSpawnInterval - survivalTime_ * 0.018f;
@@ -360,7 +386,7 @@ void Game::UpdatePlaying(float deltaTime)
     {
         enemy.Update(playerCenter, deltaTime);
 
-        if (CheckCollisionRecs(playerBounds, enemy.GetBounds()))
+        if (CheckCollisionRecs(playerBounds, enemy.GetBounds()) || IsPlayerInsideBossAura(enemy))
         {
             TriggerGameOver();
             break;
@@ -419,6 +445,7 @@ void Game::UpdatePauseAndGuideInput()
     {
         PlayUiSound();
         ResetGame();
+        ClearRecords();
         state_ = MENU;
         inputConsumed_ = true;
     }
@@ -653,7 +680,14 @@ void Game::DrawHud() const
         DrawText(TextFormat("SCORE %d", score_), 18, 44, 20, kText);
         DrawText(TextFormat("KILLS %d", kills_), 18, 70, 20, kText);
         DrawText(TextFormat("PULSE %.1f", player_.attackCooldown > 0.0f ? player_.attackCooldown : 0.0f), 18, 96, 18, kMutedText);
-        DrawText("P: PAUSE", screenWidth_ - 116, 18, 18, kMutedText);
+        if (bossWarningTimer_ > 0.0f)
+        {
+            DrawText("BOSS INCOMING", screenWidth_ - 196, 18, 18, kBossWarning);
+        }
+        else
+        {
+            DrawText("P: PAUSE", screenWidth_ - 116, 18, 18, kMutedText);
+        }
     }
     else if (state_ == GAMEOVER)
     {
@@ -675,10 +709,10 @@ void Game::DrawGuideOverlay() const
     DrawText("Mobile: use the browser control dock below the game.", 104, 244, 18, kText);
     DrawText("Pulse: press E or PULSE to clear nearby enemies.", 104, 276, 18, kText);
     DrawText("Pulse has a cooldown, so save it for close enemies.", 104, 308, 18, kMutedText);
-    DrawText("Stats: track time, kills, score, and best run records.", 104, 340, 18, kText);
-    DrawText("Pause: press P or PAUSE. Main menu appears while paused.", 104, 372, 18, kText);
-    DrawText("Guide: press G or GUIDE. Best records clear on main menu.", 104, 404, 18, kText);
-    DrawText("Sounds unlock after your first tap, click, or key press.", 104, 436, 18, kMutedText);
+    DrawText("Boss: every 20 kills, avoid the purple aura.", 104, 340, 18, kText);
+    DrawText("Boss needs two pulses and arrives with five escorts.", 104, 372, 18, kText);
+    DrawText("Stats: records clear on main menu.", 104, 404, 18, kText);
+    DrawText("Pause: press P or PAUSE. Sounds unlock after input.", 104, 436, 18, kMutedText);
     DrawText("Tap anywhere or press ESC to close.", 104, 466, 18, kMutedText);
 }
 
@@ -768,6 +802,7 @@ void Game::Attack()
     PlayPulseSound();
 
     int destroyed = 0;
+    int pulseHits = 0;
     for (int i = static_cast<int>(enemies_.size()) - 1; i >= 0; --i)
     {
         const Rectangle bounds = enemies_[i].GetBounds();
@@ -778,15 +813,31 @@ void Game::Attack()
 
         if (IsEnemyInPulseRange(bounds, playerCenter))
         {
+            ++pulseHits;
             SpawnEnemyParticles(enemyCenter);
-            enemies_.erase(enemies_.begin() + i);
-            score_ += 10;
-            ++kills_;
-            ++destroyed;
+
+            if (enemies_[i].IsBoss())
+            {
+                if (enemies_[i].Damage())
+                {
+                    SpawnEnemyParticles(enemyCenter);
+                    enemies_.erase(enemies_.begin() + i);
+                    score_ += 50;
+                    ++kills_;
+                    ++destroyed;
+                }
+            }
+            else
+            {
+                enemies_.erase(enemies_.begin() + i);
+                score_ += 10;
+                ++kills_;
+                ++destroyed;
+            }
         }
     }
 
-    if (destroyed > 0)
+    if (pulseHits > 0)
     {
         PlayEnemyHitSound();
     }
@@ -834,6 +885,50 @@ void Game::SpawnEnemy()
     );
 }
 
+void Game::SpawnBossEncounter()
+{
+    const int side = GetRandomValue(0, 3);
+    Vector2 spawnPosition = {};
+
+    switch (side)
+    {
+    case 0:
+        spawnPosition = { static_cast<float>(GetRandomValue(1, columns_ - 3) * kCellSize), -kBossSize * 0.25f };
+        break;
+    case 1:
+        spawnPosition = { static_cast<float>(screenWidth_) - kBossSize * 0.75f, static_cast<float>(GetRandomValue(1, rows_ - 3) * kCellSize) };
+        break;
+    case 2:
+        spawnPosition = { static_cast<float>(GetRandomValue(1, columns_ - 3) * kCellSize), static_cast<float>(screenHeight_) - kBossSize * 0.75f };
+        break;
+    default:
+        spawnPosition = { -kBossSize * 0.25f, static_cast<float>(GetRandomValue(1, rows_ - 3) * kCellSize) };
+        break;
+    }
+
+    const Vector2 escortOffsets[kBossEscortCount] = {
+        { -34.0f, -34.0f },
+        { 34.0f, -34.0f },
+        { -44.0f, 20.0f },
+        { 44.0f, 20.0f },
+        { 0.0f, 48.0f }
+    };
+
+    for (int i = 0; i < kBossEscortCount; ++i)
+    {
+        enemies_.emplace_back(
+            math::Add(spawnPosition, escortOffsets[i]),
+            kEnemySize,
+            kEnemyBaseSpeed + survivalTime_ * (kEnemySpeedRamp * 0.55f)
+        );
+    }
+
+    enemies_.emplace_back(spawnPosition, kBossSize, kBossSpeed, EnemyKind::Boss, 2, kBossAuraRadius);
+    bossWarningTimer_ = kBossWarningTime;
+    screenShakeTimer_ = 0.18f;
+    screenShakeMagnitude_ = 4.0f;
+}
+
 bool Game::IsPlayerReadyForThreats() const
 {
     return survivalTime_ >= kOpeningGraceSeconds;
@@ -852,6 +947,39 @@ bool Game::IsEnemyInPulseRange(Rectangle enemyBounds, Vector2 playerCenter) cons
     const Vector2 closestPoint = { closestX, closestY };
     const Vector2 delta = math::Sub(closestPoint, playerCenter);
     return math::LengthSqr(delta) <= kAttackRadius * kAttackRadius;
+}
+
+bool Game::IsPlayerInsideBossAura(const Enemy& enemy) const
+{
+    if (!enemy.IsBoss())
+    {
+        return false;
+    }
+
+    const Rectangle playerBounds = GetPlayerBounds();
+    const Vector2 bossCenter = enemy.GetCenter();
+    const float closestX = bossCenter.x < playerBounds.x
+        ? playerBounds.x
+        : (bossCenter.x > playerBounds.x + playerBounds.width ? playerBounds.x + playerBounds.width : bossCenter.x);
+    const float closestY = bossCenter.y < playerBounds.y
+        ? playerBounds.y
+        : (bossCenter.y > playerBounds.y + playerBounds.height ? playerBounds.y + playerBounds.height : bossCenter.y);
+
+    const Vector2 delta = math::Sub({ closestX, closestY }, bossCenter);
+    return math::LengthSqr(delta) <= enemy.GetAuraRadius() * enemy.GetAuraRadius();
+}
+
+bool Game::HasActiveBoss() const
+{
+    for (const Enemy& enemy : enemies_)
+    {
+        if (enemy.IsBoss())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void Game::EnsureAudio()

@@ -83,10 +83,13 @@ private:
     void TryMovePlayer(int dx, int dy);
     void Attack();
     void SpawnEnemy();
+    void SpawnBossEncounter();
     void SpawnDeathParticles();
     void SpawnEnemyParticles(Vector2 center);
     bool IsPlayerReadyForThreats() const;
     bool IsEnemyInPulseRange(Rectangle enemyBounds, Vector2 playerCenter) const;
+    bool IsPlayerInsideBossAura(const Enemy& enemy) const;
+    bool HasActiveBoss() const;
     void SetPaused(bool paused);
     void SyncPauseUi() const;
     void EnsureAudio();
@@ -117,11 +120,13 @@ private:
     float survivalTime_;
     int score_;
     int kills_;
+    int nextBossKillTarget_;
     float bestSurvivalTime_;
     int bestScore_;
     int bestKills_;
     float screenShakeTimer_;
     float screenShakeMagnitude_;
+    float bossWarningTimer_;
     bool paused_;
     bool guideOpen_;
     bool inputConsumed_;

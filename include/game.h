@@ -100,6 +100,7 @@ private:
     void PlayPulseSound();
     void PlayEnemyHitSound();
     void PlayGameOverSound();
+    void PlayBossWarningSound();
 
     Rectangle GetMenuButtonBounds() const;
     Rectangle GetGameOverButtonBounds() const;
@@ -138,6 +139,7 @@ private:
     Sound pulseSound_;
     Sound hitSound_;
     Sound gameOverSound_;
+    Sound bossWarningSound_;
     Player player_;
     std::vector<Enemy> enemies_;
     std::vector<Particle> particles_;

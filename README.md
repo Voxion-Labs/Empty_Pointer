@@ -31,14 +31,14 @@ Empty_Pointer is a lightweight arcade survival game where the player moves acros
 - Player death particles for extra impact.
 - Light screen shake on death.
 - Pulse attack for clearing nearby enemies.
-- Boss encounters after every 20 kills, with a slow purple boss and escort enemies.
+- Boss encounters after every 20 kills, with a slow purple boss, escort enemies, warning text, and alert sound.
 - Run stats for survival time, kills, score, and best records.
 - Pause screen with a return-to-main-menu option.
 - Mobile-friendly browser controls below the game canvas.
 - Procedural sound effects for movement, UI, pulse, hits, and game over.
 - Static GitHub Pages deployment through GitHub Actions.
 
-## Controls
+## Controls 🎮
 
 - Start or restart: press `ENTER`, press `SPACE`, or use `START / RESTART`.
 - Move on keyboard: hold `WASD` or the arrow keys.
@@ -49,17 +49,17 @@ Empty_Pointer is a lightweight arcade survival game where the player moves acros
 - Main menu: pause first, then use `MAIN MENU`.
 - Guide: use `G` or `GUIDE`.
 
-## How To Play
+## How To Play ⚡
 
 Survive as long as possible while enemies enter from the grid edges and chase the player. Your player occupies one grid cell in the game world, and movement slides smoothly between cells.
 
 Use movement to keep distance, then use `PULSE` when enemies get close. The pulse checks against enemy rectangles, so it can destroy enemies near the player even if their centers are not perfectly inside the ring. The pulse has a short cooldown, shown in the HUD.
 
-Every 20 kills triggers a boss encounter. A dark purple boss enters with five small escort enemies, then all of them chase the player. The boss is slower than normal enemies, but it has a visible circular aura that instantly kills the player on contact. It takes two pulse hits to destroy the boss.
+Every 20 kills triggers a boss encounter. A dark purple boss enters with five small escort enemies, then all of them chase the player. A red warning appears for 3 seconds and a short alert sound plays when the boss arrives. The boss is slower than normal enemies, but it has a visible circular aura that instantly kills the player on contact. It takes two pulse hits to destroy the boss.
 
 The game tracks your survival time, kills, and score during each run. After a game over, the best time, best score, and best kill count stay visible while you keep retrying. Returning to the main menu clears those temporary records for a fresh session.
 
-Tips:
+Tips 🧠:
 
 - Do not spam pulse when enemies are far away; save it for clusters.
 - When the red boss warning appears, create distance before the escort enemies spread out.
@@ -115,7 +115,7 @@ If Raylib is installed on your system:
 make native
 ```
 
-## Author
+## 👨‍💻Author
 
 <p align="center">
   <img src="assets/author.jpg" alt="Rudranarayan Jena portrait" width="170">
@@ -127,7 +127,7 @@ make native
    <a href="https://github.com/liambrooks-lab">View GitHub Profile</a>
 </p>
 
-## Contributing
+## 🤝Contributing
 
 Contributions are welcome. You can help by improving gameplay, polishing visuals, fixing bugs, or making the WebAssembly deployment smoother.
 
@@ -138,11 +138,11 @@ To contribute:
 3. Make your changes.
 4. Open a pull request with a clear description.
 
-## Support
+## ⭐Support
 
 If you like Empty_Pointer, please support the project by giving it a star on GitHub. It helps the project look alive and makes future improvements easier to discover.
 
-## License
+## 📄License
 
 This project is licensed under the [MIT License](LICENSE).
 

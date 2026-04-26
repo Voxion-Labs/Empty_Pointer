@@ -28,7 +28,7 @@ namespace
     constexpr float kBossSize = 68.0f;
     constexpr float kBossSpeed = 42.0f;
     constexpr float kBossAuraRadius = 62.0f;
-    constexpr float kBossWarningTime = 2.0f;
+    constexpr float kBossWarningTime = 3.0f;
 
     constexpr float kParticleMinSpeed = 90.0f;
     constexpr float kParticleMaxSpeed = 260.0f;
@@ -118,6 +118,7 @@ Game::Game(int screenWidth, int screenHeight, const char* title)
       pulseSound_(),
       hitSound_(),
       gameOverSound_(),
+      bossWarningSound_(),
       player_{ columns_ / 2, rows_ / 2, {}, {}, kPlayer, 0.0f, 0.0f, 0.0f },
       enemies_(),
       particles_()
@@ -927,6 +928,7 @@ void Game::SpawnBossEncounter()
     bossWarningTimer_ = kBossWarningTime;
     screenShakeTimer_ = 0.18f;
     screenShakeMagnitude_ = 4.0f;
+    PlayBossWarningSound();
 }
 
 bool Game::IsPlayerReadyForThreats() const
@@ -1019,6 +1021,7 @@ void Game::InitializeAudio()
     pulseSound_ = CreateToneSound(190.0f, 0.13f, 0.22f, 12.0f);
     hitSound_ = CreateToneSound(760.0f, 0.075f, 0.18f, 22.0f);
     gameOverSound_ = CreateToneSound(120.0f, 0.32f, 0.20f, 6.5f);
+    bossWarningSound_ = CreateToneSound(96.0f, 0.42f, 0.18f, 5.2f);
 }
 
 void Game::ShutdownAudio()
@@ -1033,6 +1036,7 @@ void Game::ShutdownAudio()
     UnloadSound(pulseSound_);
     UnloadSound(hitSound_);
     UnloadSound(gameOverSound_);
+    UnloadSound(bossWarningSound_);
     CloseAudioDevice();
     audioReady_ = false;
 }
@@ -1079,6 +1083,15 @@ void Game::PlayGameOverSound()
     if (audioReady_)
     {
         PlaySound(gameOverSound_);
+    }
+}
+
+void Game::PlayBossWarningSound()
+{
+    EnsureAudio();
+    if (audioReady_)
+    {
+        PlaySound(bossWarningSound_);
     }
 }
 

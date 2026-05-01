@@ -19,7 +19,7 @@
 Empty_Pointer is a lightweight arcade survival game where the player moves across a clean grid while enemies spawn from the edges and chase inward. It is designed to run directly on GitHub Pages as a static WebAssembly build, with no backend and no complicated deploy setup.
 
 <p align="center">
-  <a href="https://liambrooks-lab.github.io/Empty_Pointer/">Click to PLAY</a>
+  <a href="https://voxion-labs.github.io/Empty_Pointer/">Click to PLAY</a>
 </p>
 
 ## Features
@@ -123,6 +123,7 @@ make native
 
 <p align="center">
   <strong>Crafted by Rudranarayan Jena</strong><br>
+  <strong>Founder @Voxion Labs</strong><br>
   C++ and game-development learner building small, focused projects with clean code and web-friendly deployment in mind.<br>
    <a href="https://github.com/liambrooks-lab">View GitHub Profile</a>
 </p>

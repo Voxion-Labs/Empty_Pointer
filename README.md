@@ -5,7 +5,7 @@
 <h1 align="center">EMPTY_POINTER</h1>
 
 <p align="center">
-  A fast 2D grid-based action game built with C++, Raylib, and WebAssembly.
+  A fast-paced 2D grid-based action game built natively with C++, Raylib, and WebAssembly. 👾
 </p>
 
 <p align="center">
@@ -14,137 +14,126 @@
   <a href="https://github.com/liambrooks-lab">Author GitHub</a>
 </p>
 
-## About
-
-Empty_Pointer is a lightweight arcade survival game where the player moves across a clean grid while enemies spawn from the edges and chase inward. It is designed to run directly on GitHub Pages as a static WebAssembly build, with no backend and no complicated deploy setup.
-
 <p align="center">
-  <a href="https://voxion-labs.github.io/Empty_Pointer/">Click to PLAY</a>
+  <a href="https://voxion-labs.github.io/Empty_Pointer/"><strong>✨ CLICK HERE TO PLAY THE LIVE WEB BUILD ✨</strong></a>
 </p>
+
+---
+
+##  About
+
+**Empty_Pointer** is a lightweight arcade survival game where you navigate across a clean, minimalist grid while enemies spawn from the edges and close in on you. 
+
+Built as an experimental project under Voxion Labs, it is designed to run directly on GitHub Pages as a static WebAssembly build—zero backend, zero installations, and instant browser gameplay.
+
+---
 
 ## Features
 
-- Smooth grid movement using interpolated player rendering.
-- Dynamic enemy spawning from the edges of the playfield.
-- Menu, gameplay, and game-over state flow.
-- AABB collision detection.
-- Player death particles for extra impact.
-- Light screen shake on death.
-- Pulse attack for clearing nearby enemies.
-- Boss encounters after every 20 kills, with a slow purple boss, escort enemies, warning text, and alert sound.
-- Run stats for survival time, kills, score, and best records.
-- Pause screen with a return-to-main-menu option.
-- Mobile-friendly browser controls below the game canvas.
-- Procedural sound effects for movement, UI, pulse, hits, and game over.
-- Static GitHub Pages deployment through GitHub Actions.
+- **Fluid Grid Movement:** Interpolated player rendering for buttery-smooth grid transitions.
+- **Dynamic Threat Spawning:** Enemies continuously generate from the edges, increasing the pressure.
+- **Pulse Attack:** Unleash an AoE (Area of Effect) pulse to clear nearby enemies when cornered.
+- **Boss Encounters:** Face a challenging purple boss every 20 kills, complete with escort enemies, warning banners, and alert sounds.
+- **Juicy Game Feel:** Includes AABB collision detection, satisfying player death particles, and screen shake impacts.
+- **Run Analytics:** Tracks survival time, kills, current score, and personal best records.
+- **Cross-Platform Controls:** Fully optimized for keyboard, mouse, and mobile touch displays.
+- **Procedural Audio:** Built-in synthesized sound effects for movement, UI interactions, hits, and game over states.
 
-## Controls 🎮
+---
 
-- Start or restart: press `ENTER`, press `SPACE`, or use `START / RESTART`.
-- Move on keyboard: hold `WASD` or the arrow keys.
-- Move on mouse/touch: tap or click a grid cell.
-- Mobile movement: tap cells directly and use the browser control dock below the game.
-- Pulse attack: press `E` or use `PULSE` to destroy nearby enemies when ready.
-- Pause: press `P` or use `PAUSE`.
-- Main menu: pause first, then use `MAIN MENU`.
-- Guide: use `G` or `GUIDE`.
+## 🎮 Controls
 
-## How To Play ⚡
+| Action | Keyboard | Mouse / Touch |
+| :--- | :--- | :--- |
+| **Move** | `WASD` / Arrow Keys | Tap/Click a grid cell |
+| **Pulse Attack** | `E` | Tap `PULSE` button |
+| **Start / Restart** | `ENTER` / `SPACE` | Tap `START / RESTART` |
+| **Pause** | `P` | Tap `PAUSE` |
+| **Main Menu** | Pause first, then `MAIN MENU` | Tap `MAIN MENU` |
+| **Guide** | `G` | Tap `GUIDE` |
 
-Survive as long as possible while enemies enter from the grid edges and chase the player. Your player occupies one grid cell in the game world, and movement slides smoothly between cells.
+*Note for Mobile:* Use the browser control dock below the game canvas for reliable button inputs.
 
-Use movement to keep distance, then use `PULSE` when enemies get close. The pulse checks against enemy rectangles, so it can destroy enemies near the player even if their centers are not perfectly inside the ring. The pulse has a short cooldown, shown in the HUD.
+---
 
-Every 20 kills triggers a boss encounter. A dark purple boss enters with five small escort enemies, then all of them chase the player. A red warning banner appears for 3 seconds and a short alert sound plays when the boss arrives. The boss is slower than normal enemies, but it has a visible circular aura that instantly kills the player on contact. It takes two pulse hits to destroy the boss.
+## How To Play
 
-The game tracks your survival time, kills, and score during each run. After a game over, the best time, best score, and best kill count stay visible while you keep retrying. Returning to the main menu clears those temporary records for a fresh session.
+Survive as long as possible! Your player occupies a single grid cell. Use movement to maintain your distance, and trigger your **PULSE** attack when enemies swarm too close. 
 
-Tips 🧠:
+**Boss Fights:**
+Every 20 kills triggers a boss encounter. A red warning banner will flash, and a dark purple boss will spawn alongside five escort enemies. 
+* The boss is slower but features a visible aura that causes instant death on contact. 
+* It takes **two pulse hits** to destroy the boss.
 
-- Do not spam pulse when enemies are far away; save it for clusters.
-- When the red boss warning appears, create distance before the escort enemies spread out.
-- Stay outside the boss aura first, then pulse when the boss is close enough.
-- Move diagonally by alternating horizontal and vertical moves.
-- On mobile, use the browser control dock below the canvas for reliable buttons.
-- The canvas is locked to a 4:3 fit on phones, so rotate once or hard refresh if an old cached build still looks zoomed.
-- If the game looks zoomed after a deploy, hard refresh the page and rotate the phone once to force a viewport recalculation.
-- If sounds do not start immediately, tap any browser control once; mobile browsers require a user gesture before audio can play.
+**Pro Tips :**
+- **Conserve your Pulse:** Don't spam it when enemies are far; it has a cooldown. Save it for tight clusters.
+- **Boss Strategy:** When the red warning appears, create distance immediately before the escorts spread out. Stay outside the boss's aura and pulse when it gets in range.
+- **Diagonal Movement:** Alternate horizontal and vertical moves to zig-zag across the grid efficiently.
+- **Audio Check:** On mobile browsers, tap any control button once to register a user gesture so the procedural audio can start playing.
 
-## GitHub Pages Deployment
+---
 
-This repo is set up so GitHub Actions builds the WebAssembly version and publishes the generated static files to GitHub Pages.
+## Build & Deployment
 
-1. Push the project to a GitHub repository.
-2. Open `Settings > Pages`.
-3. Set `Build and deployment` source to `GitHub Actions`.
-4. Push to the `main` or `master` branch.
+### GitHub Pages (Automated)
+This repository uses GitHub Actions to compile the C++ code into WebAssembly and publish the static files directly to GitHub Pages.
 
-The workflow builds Raylib for `PLATFORM_WEB`, compiles the game with Emscripten, writes the final site into `public/`, and deploys it to Pages.
+**If GitHub Pages shows this README instead of the game:**
+1. Go to your repository `Settings > Pages`.
+2. Under `Build and deployment`, ensure `Source` is set to **GitHub Actions**.
+3. Go to the `Actions` tab and run the `Build and Deploy Web Game` workflow.
+4. Hard refresh (`Ctrl + F5`) the live URL once the build turns green.
 
-### If GitHub Pages Shows This README Instead Of The Game
-
-That means GitHub Pages is serving the repository branch directly instead of the workflow artifact.
-
-Fix it like this:
-
-1. Go to `Settings > Pages`.
-2. Under `Build and deployment`, set `Source` to `GitHub Actions`.
-3. Go to the `Actions` tab.
-4. Run `Build and Deploy Web Game`, or push a new commit.
-5. Wait until the workflow is fully green.
-6. Open the Pages URL again and hard refresh with `Ctrl + F5`.
-
-The real game page is generated by the workflow as `public/index.html`. The repository root does not contain the playable WebAssembly build.
-
-## Local Web Build
-
-If you have Emscripten active and a Raylib checkout available:
-
+### Local Web Build
+Requires the Emscripten SDK and a local Raylib checkout:
 ```sh
 make -C raylib/src PLATFORM=PLATFORM_WEB
 make web RAYLIB_SRC=raylib/src
 ```
+The output generates in the `public/` directory. Use any static file server (like `npx serve`) to host it locally.
 
-The output will be in `public/`. Any static file server can host that folder.
-
-## Native Build
-
-If Raylib is installed on your system:
-
+### Native Desktop Build
+If Raylib is installed natively on your OS:
 ```sh
 make native
 ```
 
-## 👨‍💻Author
+---
+
+##  Contributing
+
+Contributions are always welcome! Whether you want to polish the visuals, add new enemy types, fix bugs, or optimize the WebAssembly pipeline, feel free to jump in.
+
+1. Fork the repository.
+2. Create a new feature branch.
+3. Commit your changes.
+4. Open a Pull Request with a clear description of your upgrades.
+
+---
+
+## ⭐ Support
+
+If you enjoy playing **Empty_Pointer** or found the C++ to WebAssembly pipeline helpful for your own learning, please consider dropping a **Star** on the repository! It keeps the motivation high and helps others discover the project.
+
+---
+
+##  Author
 
 <p align="center">
-  <img src="assets/author.jpg" alt="Rudranarayan Jena portrait" width="170">
+  <img src="assets/author.jpg" alt="Rudranarayan Jena" width="150" style="border-radius: 50%;">
 </p>
 
 <p align="center">
   <strong>Crafted by Rudranarayan Jena</strong><br>
-  <strong>Founder @Voxion Labs</strong><br>
-  C++ and game-development learner building small, focused projects with clean code and web-friendly deployment in mind.<br>
-   <a href="https://github.com/liambrooks-lab">View GitHub Profile</a>
+  <em>Founder @ Voxion Labs</em><br>
+  Building deterministic systems, WebAssembly kernels, and fun native experiments.<br>
+  <a href="https://github.com/liambrooks-lab">GitHub: @liambrooks-lab</a>
 </p>
 
-## 🤝Contributing
+---
 
-Contributions are welcome. You can help by improving gameplay, polishing visuals, fixing bugs, or making the WebAssembly deployment smoother.
+## 📄 License
 
-To contribute:
+This project is licensed under the **[MIT License](LICENSE)**.
 
-1. Fork the repository.
-2. Create a new branch.
-3. Make your changes.
-4. Open a pull request with a clear description.
-
-## ⭐Support
-
-If you like Empty_Pointer, please support the project by giving it a star on GitHub. It helps the project look alive and makes future improvements easier to discover.
-
-## 📄License
-
-This project is licensed under the [MIT License](LICENSE).
-
-That means you can use, copy, modify, merge, publish, distribute, and build on this project, as long as the original MIT license notice is included. The software is provided as-is, without warranty.
+You are free to use, copy, modify, merge, publish, and distribute this software, provided the original MIT license notice is included. Built for the community, as-is, without warranty.

@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://voxion-labs.github.io/Empty_Pointer/"><strong>✨ CLICK HERE TO PLAY THE LIVE WEB BUILD ✨</strong></a>
+  <a href="https://voxion-labs.github.io/Empty_Pointer/"><strong>CLICK HERE TO PLAY THE LIVE WEB BUILD</strong></a>
 </p>
 
 ---
@@ -117,23 +117,22 @@ If you enjoy playing **Empty_Pointer** or found the C++ to WebAssembly pipeline 
 
 ---
 
-##  Author
-
-<p align="center">
-  <img src="assets/author.jpg" alt="Rudranarayan Jena" width="150" style="border-radius: 50%;">
-</p>
-
-<p align="center">
-  <strong>Crafted by Rudranarayan Jena</strong><br>
-  <em>Founder @ Voxion Labs</em><br>
-  Building deterministic systems, WebAssembly kernels, and fun native experiments.<br>
-  <a href="https://github.com/liambrooks-lab">GitHub: @liambrooks-lab</a>
-</p>
-
----
-
 ## 📄 License
 
 This project is licensed under the **[MIT License](LICENSE)**.
 
 You are free to use, copy, modify, merge, publish, and distribute this software, provided the original MIT license notice is included. Built for the community, as-is, without warranty.
+
+---
+
+<br>
+<div align="right">
+  <b>Rudranarayan Jena</b><br>
+  <i>Founder @ Voxion Labs</i>
+</div>
+
+---
+<div align="center">
+  (c) 2026 Voxion Labs & Rudranarayan Jena
+</div>
+
